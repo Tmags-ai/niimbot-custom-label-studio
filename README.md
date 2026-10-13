@@ -62,3 +62,7 @@ If this tool helps you, you can [support its development on Buy Me a Coffee](htt
 ## Disclaimer
 
 Independent community project, not affiliated with or endorsed by NIIMBOT or Canva. NIIMBOT and Canva are trademarks of their respective owners. No warranties of printer compatibility or label accuracy.
+
+## User guide
+
+📖 **[Read the complete Label Studio User Guide](USER_GUIDE.md)** for setup, label design, Canva imports, Bluetooth printing, batch CSV printing, and troubleshooting.
