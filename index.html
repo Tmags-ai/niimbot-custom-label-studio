@@ -22,7 +22,7 @@ function status(t){$('status').textContent=t}function engine(){if(!window.Niimbo
 $('connect').onclick=async()=>{try{engine();status('Opening Bluetooth device chooser…');await Niimbot.identify(model);let p=Niimbot.printer;connected=true;$('device').textContent=p?`${p.label||'NIIMBOT'} • ${p.dpi||'?'} dpi • model ${p.modelId||'unknown'}`:'Printer connected';if(p?.modelId!==4608)status('Connected, but this printer is not confirmed as M2-H (model 4608). Printing is disabled for safety.');else status('Connected to M2-H. Ready to print.');}catch(e){connected=false;status('Connection failed: '+e.message)}};
 $('disconnect').onclick=async()=>{try{if(window.Niimbot)await Niimbot.disconnect();connected=false;$('device').textContent='Not connected';status('Disconnected.')}catch(e){status(e.message)}};
 function readCopies(value){const n=Number(value);if(!Number.isInteger(n)||n<1||n>100)throw Error('Copies must be a whole number between 1 and 100.');return n;}
-$('print').onclick=async()=>{try{engine();if(!connected)throw Error('Connect your printer first.');if(Niimbot.printer?.modelId!==4608)throw Error('Printing is enabled only for identified M2-H printers.');let size=dims();render();Niimbot.WRITE_MODE=$('mode').value==='auto'?null:$('mode').value;status(`Preparing ${readCopies($('copies').value)} copies…`);await Niimbot.printImage(c.toDataURL('image/png'),{model,size,copies:readCopies($('copies').value),density:Number($('density').value),onProgress:status});status('Print job confirmed by printer.');}catch(e){status('Print error: '+e.message+' Check the paper before retrying; a partial label may have printed.')}};
+$('print').onclick=async()=>{try{if(studio.items.length&&new Set(studio.items.map(ribbonFor)).size>1)throw Error('This is a multi-ribbon design. Use Print selected ribbon color to avoid mixing passes.');engine();if(!connected)throw Error('Connect your printer first.');if(Niimbot.printer?.modelId!==4608)throw Error('Printing is enabled only for identified M2-H printers.');let size=dims();render();Niimbot.WRITE_MODE=$('mode').value==='auto'?null:$('mode').value;status(`Preparing ${readCopies($('copies').value)} copies…`);await Niimbot.printImage(c.toDataURL('image/png'),{model,size,copies:readCopies($('copies').value),density:Number($('density').value),onProgress:status});status('Print job confirmed by printer.');}catch(e){status('Print error: '+e.message+' Check the paper before retrying; a partial label may have printed.')}};
 let studioPrinting=false;
 $('studioPrint').onclick=async()=>{
  if(studioPrinting)return;
@@ -107,7 +107,7 @@ render=function(){
  oldRender();
  if(!studio.items.length)return;
  // A custom project is an independent canvas: do not bake the quick template beneath it.
- ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+ ctx.fillStyle=(!ribbonRenderPass&&studio.items.some(el=>ribbonFor(el)==='white'))?'#e5e5e5':'#fff';ctx.fillRect(0,0,c.width,c.height);
  for(const el of studio.items){
   const ribbon=ribbonFor(el);
   if(ribbonRenderPass&&ribbon!==ribbonRenderPass)continue;
