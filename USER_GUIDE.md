@@ -91,3 +91,19 @@ Donations are optional. The Label Studio remains free to use.
 ---
 
 **Compatibility note:** This build is designed for the NIIMBOT M2-H. Other NIIMBOT printer models have not been verified with this version. This is an independent project, not affiliated with NIIMBOT or Canva.
+
+## Multi-ribbon color printing (manual registration)
+
+The Studio supports **Black, White, Gold, Red, Blue, and Green** as virtual layer/ribbon colors. These colors are a screen preview; the M2-H prints one physical ribbon color at a time.
+
+1. Create your custom label and select each text, shape, image, or QR layer.
+2. Choose its **Ribbon / layer color** in the selected-layer properties.
+3. Set **Preview → All colors (combined)** to see the complete design. You can also preview just one color. White ink is displayed against a light-gray preview background so it remains visible.
+4. Select the physical ribbon color in **Ribbon installed / print color** and enter the number of copies.
+5. Load that color ribbon and click **Print selected ribbon color**. Only elements assigned to that color are sent as black-and-white print data; the physical ribbon supplies the ink color.
+6. **Manually rewind and precisely realign** the same labels without changing their order or position. Install the next ribbon, select its color, and print again.
+7. Repeat for each color. Use the **same label dimensions and copy count** for every pass.
+
+**Important:** This is manual multi-pass printing, not automatic color printing. Registration accuracy depends on your rewind and feed alignment. Test with a single label before printing multiple copies. Imported finished artwork is not separated automatically into color layers; use editable Studio layers for color passes. The regular single-pass printing controls should not be used for mixed-color custom designs.
+
+Ribbon color assignments are included when you **Export editable project** as JSON and restored when you **Import project**.
