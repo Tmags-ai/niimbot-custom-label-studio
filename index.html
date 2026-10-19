@@ -83,6 +83,7 @@ $('ribbonPrintBtn').onclick=async()=>{
   Niimbot.WRITE_MODE=$('mode').value==='auto'?null:$('mode').value;
   info.textContent='Sending '+color+' pass ('+copies+' copies)…';
   await Niimbot.printImage(data,{model,size,copies,density:Number($('density').value),onProgress:message=>{info.textContent=message;status(message)}});
+  document.dispatchEvent(new CustomEvent('niimbot-ribbon-pass-complete',{detail:{color,copies}}));
   info.textContent=color.toUpperCase()+' pass sent. Manually rewind and precisely realign labels, then change ribbon and select the next color. Do not advance labels between passes.';
  }catch(e){info.textContent='Print error: '+e.message+' Some labels may already have printed.';}
  finally{ribbonPrinting=false;button.disabled=false;render();}
@@ -261,7 +262,7 @@ $('batchprint').onclick=async()=>{
 </script><script>document.getElementById('downloadCsvTemplate').addEventListener('click',()=>{const csv='Product,Strength,LOT,Copies\r\nProduct A,10 mg,LOT-001,1\r\nProduct B,20 mg,LOT-002,2\r\n';const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='niimbot-batch-template.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);});</script><script>
 (function(){
  const byId=id=>document.getElementById(id);
- let colors=[],step=0,active=false,printed=false;
+ let colors=[],step=0,active=false,printed=false,expectedCopies=null;
  function refresh(){
   const label=byId('wizardSteps'),next=byId('wizardNext'),help=byId('wizardHelp');
   if(!active){label.textContent='Step 1 — Choose your ribbon color and preview its layers.';next.disabled=true;return;}
@@ -270,21 +271,27 @@ $('batchprint').onclick=async()=>{
   byId('ribbonPrint').value=color;byId('ribbonPreview').value=color;byId('ribbonPreview').dispatchEvent(new Event('change'));
   label.textContent='Pass '+(step+1)+' of '+colors.length+': '+color.toUpperCase()+' ribbon';
   help.textContent=step===0?'Install the '+color+' ribbon, confirm the correct labels are loaded, then use Print selected ribbon color below.':'Rewind and precisely realign the SAME labels without changing their order. Install the '+color+' ribbon, then print this pass below.';
-  next.disabled=false;next.textContent=step===colors.length-1?'Finish guide':'Next color / step';
+  next.disabled=!printed;next.textContent=step===colors.length-1?'Finish guide':'Next color / step';
+  if(printed)help.textContent='Print command completed for '+color+'. Inspect the physical labels and alignment before continuing.';
  }
  byId('wizardStart').addEventListener('click',()=>{
   if(typeof studio==='undefined'||!studio.items?.length){byId('wizardHelp').textContent='Add at least one layer before starting the guide.';return;}
   colors=[...new Set(studio.items.map(el=>el.ribbon||'black'))].filter(c=>['black','white','gold','red','blue','green'].includes(c));
-  step=0;active=true;printed=false;refresh();
+  step=0;active=true;printed=false;expectedCopies=byId('ribbonCopies').value;refresh();
  });
  byId('wizardNext').addEventListener('click',()=>{
   if(!active)return;
-  if(!printed&&!confirm('Have you printed and checked this ribbon pass? Continue only if the output is correct.'))return;
+  if(!printed)return;
+  if(!confirm('Did you inspect the physical labels and confirm the '+colors[step]+' pass printed correctly?'))return;
   step++;printed=false;refresh();
  });
  byId('wizardReset').addEventListener('click',()=>{
   active=false;step=0;printed=false;byId('ribbonPreview').value='all';byId('ribbonPreview').dispatchEvent(new Event('change'));byId('wizardHelp').textContent='Guide reset. Your artwork and layer colors are unchanged.';refresh();
  });
- byId('ribbonPrintBtn').addEventListener('click',()=>{if(active)printed=true;});
+ document.addEventListener('niimbot-ribbon-pass-complete',event=>{
+  if(!active||colors[step]!==event.detail.color)return;
+  if(String(event.detail.copies)!==String(expectedCopies)){byId('wizardHelp').textContent='Copy count differs from the first pass. Keep identical copy counts for registration.';return;}
+  printed=true;refresh();
+ });
 })();
 </script></body></html>
