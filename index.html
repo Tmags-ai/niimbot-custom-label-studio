@@ -104,6 +104,25 @@ function askExportName(defaultBase,ext){
  return cleaned.replace(new RegExp('\\\\.'+ext+'$','i'),'')+'.'+ext;
 }
 const studio={items:[],selected:null,drag:null};
+let studioLastCanvasSize=dims();
+function preserveLayerDimensions(){
+ const next=dims(),prev=studioLastCanvasSize;
+ if(prev.w_px!==next.w_px||prev.h_px!==next.h_px){
+  for(const el of studio.items){
+   // Keep every layer's physical width and height instead of stretching it with the canvas.
+   // Retain its relative center on the label; objects may extend beyond a narrower label.
+   const centerX=(Number(el.x)||0)+(Number(el.w)||0)/2;
+   const centerY=(Number(el.y)||0)+(Number(el.h)||0)/2;
+   el.w=(Number(el.w)||0)*prev.w_px/next.w_px;
+   el.h=(Number(el.h)||0)*prev.h_px/next.h_px;
+   el.x=centerX-el.w/2;
+   el.y=centerY-el.h/2;
+  }
+  studioLastCanvasSize=next;
+  const selected=studio.items.find(el=>el.id===studio.selected);
+  if(selected){for(const [id,key] of [['px','x'],['py','y'],['pw','w'],['ph','h']])$(id).value=Number(selected[key]).toFixed(2);}
+ }
+}
 function syncQrDimensions(){const d=dims();for(const el of studio.items){if(['qr','square','circle'].includes(el.type))el.h=el.w*d.w_px/d.h_px;}}
 
 const qrScript=document.createElement('script');qrScript.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';document.head.appendChild(qrScript);
@@ -113,6 +132,7 @@ function ribbonFor(el){return Object.hasOwn(ribbonColors,el.ribbon)?el.ribbon:'b
 function ribbonImage(img,w,h,color){const t=document.createElement('canvas');t.width=Math.max(1,Math.round(w));t.height=Math.max(1,Math.round(h));const g=t.getContext('2d');g.drawImage(img,0,0,t.width,t.height);const pixels=g.getImageData(0,0,t.width,t.height);const hex=ribbonColors[color]||'#151515',rgb=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));for(let j=0;j<pixels.data.length;j+=4){const d=pixels.data;const darkness=1-(d[j]*.2126+d[j+1]*.7152+d[j+2]*.0722)/255;d[j]=rgb[0];d[j+1]=rgb[1];d[j+2]=rgb[2];d[j+3]=Math.round(d[j+3]*darkness);}g.putImageData(pixels,0,0);return t;}
 const oldRender=render;
 render=function(){
+ preserveLayerDimensions();
  syncQrDimensions();
  oldRender();
  if(!studio.items.length)return;
@@ -156,7 +176,7 @@ render=function(){
  }
 
 };
-function selection(){syncQrDimensions();const el=studio.items.find(e=>e.id===studio.selected);$('props').style.display=el?'block':'none';if(el){if(['qr','square','circle'].includes(el.type)){const d=dims();el.h=el.w*d.w_px/d.h_px;}$('aspectlock').checked=['qr','square','circle'].includes(el.type)?true:$('aspectlock').checked;$('aspectlock').disabled=['qr','square','circle'].includes(el.type);$('pribbon').value=ribbonFor(el);$('proptext').value=el.text||'';for(const [id,key] of [['px','x'],['py','y'],['pw','w'],['ph','h'],['psize','size'],['protate','rotate'],['pradius','radius']])$(id).value=el[key]??0;$('pfont').value=el.font||'Arial';$('pbold').checked=!!el.bold;$('psnap').checked=!!el.snap;$('snaptarget').innerHTML='<option value="all">Nearest layer (automatic)</option>';studio.items.filter(x=>x.id!==el.id).forEach(x=>{const option=document.createElement('option');option.value=String(x.id);option.textContent=x.type+' · '+(x.text||'object').slice(0,25);$('snaptarget').append(option)});$('snaptarget').value=el.snapTarget||'all';$('pcolor').value=el.color||'black';$('pfill').value=el.fill||'none';$('pinvert').checked=!!el.invert;$('protate').value=el.rotate||0;$('pradius').value=el.radius||0;}$('layers').innerHTML='';studio.items.slice().reverse().forEach(el=>{let div=document.createElement('div');div.className='layer'+(el.id===studio.selected?' active':'');let span=document.createElement('span');span.textContent=el.type+' · '+(el.text||'object').slice(0,28);span.onclick=()=>{studio.selected=el.id;selection();};div.append(span);for(const [txt,dir] of [['↑',1],['↓',-1]]){let b=document.createElement('button');b.textContent=txt;b.onclick=()=>{let i=studio.items.indexOf(el),j=i+dir;if(j>=0&&j<studio.items.length){[studio.items[i],studio.items[j]]=[studio.items[j],studio.items[i]];selection();render();}};div.append(b)}$('layers').append(div)});render();}
+function selection(){preserveLayerDimensions();syncQrDimensions();const el=studio.items.find(e=>e.id===studio.selected);$('props').style.display=el?'block':'none';if(el){if(['qr','square','circle'].includes(el.type)){const d=dims();el.h=el.w*d.w_px/d.h_px;}$('aspectlock').checked=['qr','square','circle'].includes(el.type)?true:$('aspectlock').checked;$('aspectlock').disabled=['qr','square','circle'].includes(el.type);$('pribbon').value=ribbonFor(el);$('proptext').value=el.text||'';for(const [id,key] of [['px','x'],['py','y'],['pw','w'],['ph','h'],['psize','size'],['protate','rotate'],['pradius','radius']])$(id).value=el[key]??0;$('pfont').value=el.font||'Arial';$('pbold').checked=!!el.bold;$('psnap').checked=!!el.snap;$('snaptarget').innerHTML='<option value="all">Nearest layer (automatic)</option>';studio.items.filter(x=>x.id!==el.id).forEach(x=>{const option=document.createElement('option');option.value=String(x.id);option.textContent=x.type+' · '+(x.text||'object').slice(0,25);$('snaptarget').append(option)});$('snaptarget').value=el.snapTarget||'all';$('pcolor').value=el.color||'black';$('pfill').value=el.fill||'none';$('pinvert').checked=!!el.invert;$('protate').value=el.rotate||0;$('pradius').value=el.radius||0;}$('layers').innerHTML='';studio.items.slice().reverse().forEach(el=>{let div=document.createElement('div');div.className='layer'+(el.id===studio.selected?' active':'');let span=document.createElement('span');span.textContent=el.type+' · '+(el.text||'object').slice(0,28);span.onclick=()=>{studio.selected=el.id;selection();};div.append(span);for(const [txt,dir] of [['↑',1],['↓',-1]]){let b=document.createElement('button');b.textContent=txt;b.onclick=()=>{let i=studio.items.indexOf(el),j=i+dir;if(j>=0&&j<studio.items.length){[studio.items[i],studio.items[j]]=[studio.items[j],studio.items[i]];selection();render();}};div.append(b)}$('layers').append(div)});render();}
 function add(type,extra={}){const d=dims(),qrSide=Math.min(d.w_px,d.h_px)*0.38,qrW=qrSide/d.w_px*100,qrH=qrSide/d.h_px*100;let el={id:Date.now()+Math.random(),type,ribbon:'black',x:type==='qr'?(100-qrW)/2:12,y:type==='qr'?(100-qrH)/2:15,w:type==='qr'?qrW:type==='line'?65:45,h:type==='qr'?qrH:type==='line'?0:25,size:12,font:'Arial',bold:false,color:'black',fill:'none',invert:false,rotate:0,radius:0,text:type==='text'?'New text':type==='qr'?'https://example.com':'',...extra};studio.items.push(el);studio.selected=el.id;if(type==='qr')makeQR(el);selection();}
 async function makeQR(el){if(!window.QRCode){status('QR library still loading. Try editing the QR value again.');return}let host=document.createElement('div');host.style.cssText='position:absolute;left:-9999px';document.body.append(host);new QRCode(host,{text:el.text||' ',width:256,height:256,correctLevel:QRCode.CorrectLevel.M});await new Promise(r=>setTimeout(r,100));let image=host.querySelector('img')||host.querySelector('canvas');if(image){let src=image.tagName==='CANVAS'?image.toDataURL():image.src;let im=new Image();im.onload=()=>{el.qrimg=im;render()};im.src=src;}host.remove();}
 $('pribbon').onchange=()=>{const el=studio.items.find(e=>e.id===studio.selected);if(!el)return;el.ribbon=$('pribbon').value;selection();};
