@@ -362,9 +362,10 @@ $('batchprint').onclick=async()=>{
 </script><script>
 (function(){
  const preset=document.getElementById('labelSizePreset'),w=document.getElementById('width'),h=document.getElementById('height'),custom=document.getElementById('customLabelSize');
- function update(){const isCustom=preset.value==='custom';custom.hidden=!isCustom;if(!isCustom){const values=preset.value.split(',').map(Number);w.value=values[0];h.value=values[1];w.dispatchEvent(new Event('input',{bubbles:true}));h.dispatchEvent(new Event('input',{bubbles:true}));}if(typeof render==='function')render();}
+ let applyingPreset=false;
+ function update(){const isCustom=preset.value==='custom';custom.hidden=!isCustom;if(!isCustom){const values=preset.value.split(',').map(Number);applyingPreset=true;w.value=values[0];h.value=values[1];w.dispatchEvent(new Event('input',{bubbles:true}));h.dispatchEvent(new Event('input',{bubbles:true}));applyingPreset=false;}if(typeof render==='function')render();}
  preset.addEventListener('change',update);
- [w,h].forEach(el=>el.addEventListener('input',()=>{if(preset.value!=='custom'){preset.value='custom';custom.hidden=false;}}));
+ [w,h].forEach(el=>el.addEventListener('input',()=>{if(!applyingPreset&&preset.value!=='custom'){preset.value='custom';custom.hidden=false;}}));
  update();
 })();
 </script></body></html>
