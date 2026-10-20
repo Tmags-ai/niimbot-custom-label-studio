@@ -111,12 +111,12 @@ function preserveLayerDimensions(){
   for(const el of studio.items){
    // Keep every layer's physical width and height instead of stretching it with the canvas.
    // Retain its relative center on the label; objects may extend beyond a narrower label.
-   const centerX=(Number(el.x)||0)+(Number(el.w)||0)/2;
-   const centerY=(Number(el.y)||0)+(Number(el.h)||0)/2;
+   const centerX=((Number(el.x)||0)+(Number(el.w)||0)/2)*prev.w_px;
+   const centerY=((Number(el.y)||0)+(Number(el.h)||0)/2)*prev.h_px;
    el.w=(Number(el.w)||0)*prev.w_px/next.w_px;
    el.h=(Number(el.h)||0)*prev.h_px/next.h_px;
-   el.x=centerX-el.w/2;
-   el.y=centerY-el.h/2;
+   el.x=centerX/next.w_px-el.w/2;
+   el.y=centerY/next.h_px-el.h/2;
   }
   studioLastCanvasSize=next;
   const selected=studio.items.find(el=>el.id===studio.selected);
@@ -182,7 +182,7 @@ async function makeQR(el){if(!window.QRCode){status('QR library still loading. T
 $('pribbon').onchange=()=>{const el=studio.items.find(e=>e.id===studio.selected);if(!el)return;el.ribbon=$('pribbon').value;selection();};
 $('ribbonPreview').onchange=()=>render();
 for(const [id,key] of [['pcolor','color'],['pfill','fill'],['pinvert','invert']])$(id).addEventListener('change',()=>{let el=studio.items.find(e=>e.id===studio.selected);if(!el)return;el[key]=id==='pinvert'?$(id).checked:$(id).value;render();});
-$('addtext').onclick=()=>add('text');$('addline').onclick=()=>add('line');$('addrect').onclick=()=>add('box');$('addsquare').onclick=()=>{const d=dims();add('square',{w:28,h:28*d.w_px/d.h_px})};$('addcircle').onclick=()=>{const d=dims();add('circle',{w:28,h:28*d.w_px/d.h_px})};$('addellipse').onclick=()=>add('ellipse');$('addtriangle').onclick=()=>add('triangle');$('addhexagon').onclick=()=>add('hexagon',{w:32,h:32});$('addqr').onclick=()=>add('qr');$('addimage').onclick=()=>$('elementfile').click();
+$('addtext').onclick=()=>add('text');$('addline').onclick=()=>add('line');$('addrect').onclick=()=>add('box');$('addsquare').onclick=()=>{const d=dims();add('square',{w:28,h:28*d.w_px/d.h_px})};$('addcircle').onclick=()=>{const d=dims();add('circle',{w:28,h:28*d.w_px/d.h_px})};$('addellipse').onclick=()=>{const d=dims();add('ellipse',{w:40,h:25*d.w_px/d.h_px})};$('addtriangle').onclick=()=>add('triangle');$('addhexagon').onclick=()=>{const d=dims();add('hexagon',{w:32,h:32*d.w_px/d.h_px})};$('addqr').onclick=()=>add('qr');$('addimage').onclick=()=>$('elementfile').click();
 $('elementfile').onchange=async e=>{let f=e.target.files[0];if(!f)return;let data=await new Promise((resolve,reject)=>{let r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(f)});let im=new Image();im.onload=()=>{const labelW=Number($('width').value)||50,labelH=Number($('height').value)||30;let w=80,h=w*(im.naturalHeight/im.naturalWidth)*(labelW/labelH);if(h>85){h=85;w=h*(im.naturalWidth/im.naturalHeight)*(labelH/labelW);}add('image',{src:data,img:im,w,h,x:(100-w)/2,y:(100-h)/2,aspect:im.naturalWidth/im.naturalHeight});};im.src=data;e.target.value='';};
 for(const [id,key] of [['px','x'],['py','y'],['pw','w'],['ph','h'],['psize','size'],['protate','rotate'],['pradius','radius'],['pfont','font'],['pbold','bold'],['proptext','text']])$(id).addEventListener('input',()=>{let el=studio.items.find(e=>e.id===studio.selected);if(!el)return;el[key]=id==='pbold'?$(id).checked:['font','text'].includes(key)?$(id).value:Number($(id).value);if(['qr','square','circle'].includes(el.type)&&['w','h'].includes(key)){const d=dims(),ratio=d.w_px/d.h_px;if(key==='w'){el.h=el.w*ratio;$('ph').value=el.h.toFixed(2)}else{el.w=el.h/ratio;$('pw').value=el.w.toFixed(2)}}if(el.type==='image'&&$('aspectlock').checked&&['w','h'].includes(key)){const ratio=el.aspect||(el.img?el.img.naturalWidth/el.img.naturalHeight:1);const labelW=Number($('width').value)||50,labelH=Number($('height').value)||30;if(key==='w'){el.h=el.w/ratio*labelW/labelH;$('ph').value=el.h.toFixed(2)}else{el.w=el.h*ratio*labelH/labelW;$('pw').value=el.w.toFixed(2)}}if(key==='text'&&el.type==='qr')makeQR(el);render();});
 $('psnap').onchange=()=>{const el=studio.items.find(x=>x.id===studio.selected);if(el)el.snap=$('psnap').checked;};$('snaptarget').onchange=()=>{const el=studio.items.find(x=>x.id===studio.selected);if(el)el.snapTarget=$('snaptarget').value;};
