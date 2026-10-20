@@ -491,11 +491,13 @@ function usbPacket(command,payload){
 function usbHex(bytes){return [...bytes].map(x=>x.toString(16).padStart(2,'0').toUpperCase()).join('-');}
 async function usbReadPacket(timeoutMs=5000){
  const deadline=Date.now()+timeoutMs;
+ // Only one outstanding read at a time. A timed-out read must not be
+ // abandoned while a second read is started on the same stream.
+ let pending=null;
  while(Date.now()<deadline){
-  // Find a complete framed response, preserving any bytes received earlier.
   while(usbReadBuffer.length>=2&&(usbReadBuffer[0]!==0x55||usbReadBuffer[1]!==0x55))usbReadBuffer.shift();
   if(usbReadBuffer.length>=4){
-   const len=usbReadBuffer[3],total=2+1+1+len+1+2;
+   const len=usbReadBuffer[3],total=7+len;
    if(usbReadBuffer.length>=total){
     const packet=usbReadBuffer.slice(0,total);usbReadBuffer.splice(0,total);
     let check=0;for(let i=2;i<4+len;i++)check^=packet[i];
@@ -503,12 +505,15 @@ async function usbReadPacket(timeoutMs=5000){
     continue;
    }
   }
+  if(!usbReader)throw Error('USB reader is not available.');
+  if(!pending)pending=usbReader.read();
   const remaining=deadline-Date.now();
   if(remaining<=0)break;
-  const outcome=await Promise.race([usbReader.read(),new Promise(resolve=>setTimeout(()=>resolve({timeout:true}),Math.min(remaining,250)))]);
-  if(outcome.timeout)continue;
-  if(outcome.done)throw Error('USB stream closed.');
-  if(outcome.value)usbReadBuffer.push(...outcome.value);
+  const result=await Promise.race([pending,new Promise(resolve=>setTimeout(()=>resolve({timeout:true}),Math.min(remaining,250)))]);
+  if(result.timeout)continue;
+  pending=null;
+  if(result.done)throw Error('USB stream closed by printer or browser.');
+  if(result.value)usbReadBuffer.push(...result.value);
  }
  throw Error('No complete USB response received within five seconds.');
 }
@@ -527,22 +532,33 @@ $('usbRfid').onclick=async()=>{
  if(!usbPort)return usbText('Connect USB first.');
  if(usbBusy)return;
  usbBusy=true;$('usbRfid').disabled=true;
+ let reader=null;
  try{
   usbText('Reading RFID information over USB…');
   usbReadBuffer=[];
+  // Some USB CDC implementations close their readable stream when the device
+  // disconnects or reports an error. Diagnose this before attempting getReader.
+  if(!usbPort.readable||!usbPort.writable)throw Error('USB port streams are unavailable. Disconnect USB, unplug/replug printer, and reconnect.');
+  reader=usbPort.readable.getReader();
+  usbReader=reader;
   const writer=usbPort.writable.getWriter();
   try{await writer.write(usbPacket(0x1A,[0x01]));}finally{writer.releaseLock();}
-  usbReader=usbPort.readable.getReader();
-  try{
-   const packet=await usbReadPacket();
-   if(packet[2]!==0x1B)throw Error('Unexpected response command 0x'+packet[2].toString(16));
-   usbText('M2-H USB RFID response received (read-only).\\n'+
-     'Response: '+usbHex(packet)+'\\n'+
-     'Raw payload: '+usbHex(packet.slice(4,4+packet[3]))+'\\n'+
-     'Counter decoding not yet verified. No consumable values were changed.');
-  }finally{await usbReader.cancel().catch(()=>{});usbReader.releaseLock();usbReader=null;}
- }catch(e){usbText('USB RFID read failed: '+e.message);}
- finally{usbBusy=false;$('usbRfid').disabled=false;}
+  const packet=await usbReadPacket();
+  if(packet[2]!==0x1B)throw Error('Unexpected response command 0x'+packet[2].toString(16));
+  usbText('M2-H USB RFID response received (read-only).\n'+
+    'Response: '+usbHex(packet)+'\n'+
+    'Raw payload: '+usbHex(packet.slice(4,4+packet[3]))+'\n'+
+    'Counter decoding not yet verified. No consumable values were changed.');
+ }catch(e){
+  usbText('USB RFID read failed: '+e.message+
+    '\nIf the printer disconnected, unplug/replug its USB cable and reconnect. Close other apps using COM4.');
+ }finally{
+  if(reader){
+   try{await reader.cancel();}catch(e){}
+   try{reader.releaseLock();}catch(e){}
+  }
+  usbReader=null;usbBusy=false;$('usbRfid').disabled=false;
+ }
 };
 $('disconnectUsb').onclick=async()=>{
  if(!usbPort)return usbText('USB: not connected.');
