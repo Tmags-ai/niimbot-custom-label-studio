@@ -34,11 +34,11 @@ function refreshRollDiagnostics(){
  const reading=rollCounterReading();
  let delta='Not measurable';
  if(reading&&lastRollReading&&lastRollReading.key===reading.key)delta=String(reading.value-lastRollReading.value);
- el.textContent='Printer: '+(p?(p.label||'Connected')+' (model '+(p.modelId??'unknown')+')':'not connected')+
- '\\nRFID remaining labels: '+(reading?reading.value+' (unverified engine field: '+reading.key+')':'Counter unavailable')+
- '\\nChange since last reading: '+delta+
- '\\nPrint commands this session: '+studioPrintCommands+
- '\\nRFID deductions: '+(reading?'Not verified':'Unknown');
+ el.textContent=['Printer: '+(p?(p.label||'Connected')+' (model '+(p.modelId??'unknown')+')':'not connected'),
+ 'RFID remaining labels: '+(reading?reading.value+' (unverified engine field: '+reading.key+')':'Counter unavailable'),
+ 'Change since last reading: '+delta,
+ 'Print commands this session: '+studioPrintCommands,
+ 'RFID deductions: '+(reading?'Not verified':'Unknown')].join(String.fromCharCode(10));
  lastRollReading=reading;
 }
 $('refreshRollDiagnostics').onclick=refreshRollDiagnostics;
