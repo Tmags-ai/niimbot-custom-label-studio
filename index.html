@@ -321,7 +321,8 @@ $('customFontUpload').onchange=async e=>{
  }catch(err){status('Font import failed: '+err.message)}
  e.target.value='';
 };
-\n$('saveproject').onclick=()=>{let data={version:1,width:$('width').value,height:$('height').value,customFonts:Object.fromEntries(customFonts),items:studio.items.map(({img,qrimg,...rest})=>rest)};let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const name=askExportName('niimbot-editable-label','json');if(!name){URL.revokeObjectURL(a.href);return;}a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
+
+$('saveproject').onclick=()=>{let data={version:1,width:$('width').value,height:$('height').value,customFonts:Object.fromEntries(customFonts),items:studio.items.map(({img,qrimg,...rest})=>rest)};let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const name=askExportName('niimbot-editable-label','json');if(!name){URL.revokeObjectURL(a.href);return;}a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
 $('loadproject').onclick=()=>{const input=$('projectfile');input.value='';input.click();};
 $('projectfile').onchange=async e=>{
  const file=e.target.files?.[0];
