@@ -322,8 +322,51 @@ $('customFontUpload').onchange=async e=>{
  e.target.value='';
 };
 \n$('saveproject').onclick=()=>{let data={version:1,width:$('width').value,height:$('height').value,customFonts:Object.fromEntries(customFonts),items:studio.items.map(({img,qrimg,...rest})=>rest)};let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const name=askExportName('niimbot-editable-label','json');if(!name){URL.revokeObjectURL(a.href);return;}a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
-$('loadproject').onclick=()=>$('projectfile').click();
-$('projectfile').onchange=async e=>{try{let data=JSON.parse(await e.target.files[0].text());if(!Array.isArray(data.items)||data.items.length>200)throw Error('Invalid project');if(data.customFonts){for(const [name,source] of Object.entries(data.customFonts))await installCustomFont(name,source);}$('width').value=data.width||40;$('height').value=data.height||20;studio.items=data.items.map(el=>({...el,id:Date.now()+Math.random()}));for(let el of studio.items){if(el.type==='image'&&el.src){let im=new Image();im.onload=render;im.src=el.src;el.img=im;if(!el.aspect)im.onload=()=>{el.aspect=im.naturalWidth/im.naturalHeight;render()};}if(el.type==='qr')makeQR(el)}studio.selected=null;selection();status('Editable project imported.');}catch(err){status('Project import failed: '+err.message)}};
+$('loadproject').onclick=()=>{const input=$('projectfile');input.value='';input.click();};
+$('projectfile').onchange=async e=>{
+ const file=e.target.files?.[0];
+ if(!file)return;
+ try{
+  const raw=await file.text();
+  let data;
+  try{data=JSON.parse(raw.replace(/^\\uFEFF/,''));}
+  catch(err){throw Error('This file is not valid JSON. '+err.message);}
+  // Accept both the Studio export and bare item-array templates.
+  if(Array.isArray(data))data={items:data};
+  if(!data||typeof data!=='object'||!Array.isArray(data.items))
+   throw Error('No editable "items" array found. Choose a Studio editable-project JSON, not a printer-settings JSON.');
+  if(data.items.length>200)throw Error('Project has more than 200 layers.');
+  const validItems=data.items.map((el,i)=>{
+   if(!el||typeof el!=='object'||Array.isArray(el))throw Error('Invalid layer at position '+(i+1));
+   return {...el,id:Date.now()+i+Math.random()};
+  });
+  // Font-loading failures should not prevent a valid label from importing.
+  let fontWarnings=0;
+  if(data.customFonts&&typeof data.customFonts==='object'){
+   for(const [name,source] of Object.entries(data.customFonts)){
+    try{await installCustomFont(name,source);}catch(err){fontWarnings++;console.warn('Custom font skipped:',name,err);}
+   }
+  }
+  if(data.width!==undefined&&Number(data.width)>0)$('width').value=data.width;
+  if(data.height!==undefined&&Number(data.height)>0)$('height').value=data.height;
+  studio.items=validItems;
+  for(const el of studio.items){
+   if(el.type==='image'&&el.src){
+    const im=new Image();el.img=im;
+    im.onload=()=>{if(!el.aspect)el.aspect=im.naturalWidth/im.naturalHeight;render();};
+    im.onerror=()=>console.warn('Unable to load project image');
+    im.src=el.src;
+   }
+   if(el.type==='qr')makeQR(el);
+  }
+  studio.selected=null;selection();render();
+  status('Imported '+studio.items.length+' editable layers from '+file.name+(fontWarnings?' ('+fontWarnings+' custom fonts could not load)':'')+'.');
+ }catch(err){
+  console.error('Project import failed:',err);
+  status('Project import failed: '+err.message);
+  alert('Could not import '+file.name+'\\n\\n'+err.message);
+ }finally{e.target.value='';}
+};
 
 // Batch printing: placeholder substitution is temporary and never modifies the saved template.
 const batch={headers:[],rows:[],original:null,running:false,stop:false};
