@@ -77,6 +77,15 @@ async function safeRfidSnapshot(){
   return {value:Number.isFinite(Number(value))&&value!=null?Number(value):null,error:null};
  }catch(e){return {value:null,error:e?.message||String(e)};}
 }
+async function preparePrintOrientation(data,opts){
+ if($('labelOrientation').value!=='portrait')return {data,opts};
+ const img=new Image();img.src=data;await img.decode();
+ if(img.naturalHeight<=img.naturalWidth)return {data,opts};
+ const out=document.createElement('canvas');out.width=img.naturalHeight;out.height=img.naturalWidth;
+ const g=out.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,out.width,out.height);
+ g.translate(out.width,0);g.rotate(Math.PI/2);g.drawImage(img,0,0);
+ return {data:out.toDataURL('image/png'),opts:{...opts,size:{...opts.size,w_px:out.width,h_px:out.height}}};
+}
 async function calibratePrintImage(data){
  const scale=Number($('printScale').value),dx=Number($('printShiftX').value),dy=Number($('printShiftY').value);
  if(!Number.isFinite(scale)||scale<80||scale>100||!Number.isFinite(dx)||Math.abs(dx)>5||!Number.isFinite(dy)||Math.abs(dy)>5)throw Error('Invalid print alignment settings.');
@@ -103,7 +112,7 @@ async function printWithSafety(data,opts){
  const before=await safeRfidSnapshot();
  report.textContent='Before print: '+(before.value??'Unavailable')+' (inferred usedPaper)\\nPrinting…';
  let result,printError=null;
- try{const aligned=await calibratePrintImage(data);result=usbPrintClient?.isConnected?.()?await printImageUsb(aligned,opts):await Niimbot.printImage(aligned,opts);studioPrintCommands++;}
+ try{const aligned=await calibratePrintImage(data);const prepared=await preparePrintOrientation(aligned,opts);result=usbPrintClient?.isConnected?.()?await printImageUsb(prepared.data,prepared.opts):await Niimbot.printImage(prepared.data,prepared.opts);studioPrintCommands++;}
  catch(e){printError=e;}
  const after=await safeRfidSnapshot();
  const diff=before.value!=null&&after.value!=null?after.value-before.value:null;
