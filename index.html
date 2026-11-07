@@ -245,11 +245,19 @@ let ribbonRenderPass=null;
 function ribbonFor(el){return Object.hasOwn(ribbonColors,el.ribbon)?el.ribbon:'black';}
 function ribbonImage(img,w,h,color){const t=document.createElement('canvas');t.width=Math.max(1,Math.round(w));t.height=Math.max(1,Math.round(h));const g=t.getContext('2d');g.drawImage(img,0,0,t.width,t.height);const pixels=g.getImageData(0,0,t.width,t.height);const hex=ribbonColors[color]||'#151515',rgb=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));for(let j=0;j<pixels.data.length;j+=4){const d=pixels.data;const darkness=1-(d[j]*.2126+d[j+1]*.7152+d[j+2]*.0722)/255;d[j]=rgb[0];d[j+1]=rgb[1];d[j+2]=rgb[2];d[j+3]=Math.round(d[j+3]*darkness);}g.putImageData(pixels,0,0);return t;}
 const oldRender=render;
+const baseRender=oldRender;
+render=function(){
+ if(finished&&backgroundBounds){
+  const saved=finished;finished=null;baseRender();finished=saved;
+  const b=backgroundBounds;ctx.drawImage(finished,b.x*c.width/100,b.y*c.height/100,b.w*c.width/100,b.h*c.height/100);
+ }else baseRender();
+};
+const backgroundRender=render;
 render=function(){
  preserveLayerDimensions();
  syncQrDimensions();
- oldRender();
- if(!studio.items.length)return;
+ backgroundRender();
+ if(!studio.items.length){requestAnimationFrame(updateResizeOverlay);return;}
  // A custom project is an independent canvas: do not bake the quick template beneath it.
  if(!finished){ctx.fillStyle=(!ribbonRenderPass&&studio.items.some(el=>ribbonFor(el)==='white'))?'#e5e5e5':'#fff';ctx.fillRect(0,0,c.width,c.height);}
  for(const el of studio.items){
@@ -304,21 +312,49 @@ $('duplicate').onclick=()=>{let el=studio.items.find(e=>e.id===studio.selected);
 $('delete').onclick=()=>{studio.items=studio.items.filter(e=>e.id!==studio.selected);studio.selected=null;selection()};
 $('resetproject').onclick=()=>{if(confirm('Clear all custom layers?')){studio.items=[];studio.selected=null;selection();}};
 
+const resizeOverlay=document.createElement('div');
+resizeOverlay.style.cssText='position:absolute;pointer-events:none;border:2px dashed #1685f5;box-sizing:border-box;display:none;z-index:3';
+const previewParent=c.parentElement;previewParent.style.position='relative';previewParent.appendChild(resizeOverlay);
+const resizeHandles=['nw','ne','sw','se'].map(corner=>{const h=document.createElement('span');h.dataset.corner=corner;h.style.cssText='position:absolute;width:12px;height:12px;background:#fff;border:2px solid #1685f5;border-radius:3px;box-sizing:border-box;pointer-events:none;';h.style.left=corner.includes('w')?'-7px':'calc(100% - 5px)';h.style.top=corner.includes('n')?'-7px':'calc(100% - 5px)';resizeOverlay.appendChild(h);return h;});
+let backgroundBounds=null,backgroundSelected=false;
+function activeBounds(){return backgroundSelected&&finished?(backgroundBounds||{x:0,y:0,w:100,h:100}):studio.items.find(el=>el.id===studio.selected);}
+function updateResizeOverlay(){
+ const b=activeBounds();if(!b){resizeOverlay.style.display='none';return;}
+ const rect=c.getBoundingClientRect(),pr=previewParent.getBoundingClientRect();
+ resizeOverlay.style.display='block';resizeOverlay.style.left=(rect.left-pr.left+b.x*rect.width/100)+'px';resizeOverlay.style.top=(rect.top-pr.top+b.y*rect.height/100)+'px';
+ resizeOverlay.style.width=(b.w*rect.width/100)+'px';resizeOverlay.style.height=(b.h*rect.height/100)+'px';
+}
 function point(e){let r=c.getBoundingClientRect();return {x:(e.clientX-r.left)/r.width*100,y:(e.clientY-r.top)/r.height*100};}
-c.addEventListener('pointerdown',e=>{let p=point(e);let hit=studio.items.slice().reverse().find(el=>p.x>=el.x-2&&p.x<=el.x+el.w+2&&p.y>=el.y-2&&p.y<=el.y+Math.max(el.h,5)+2);if(hit){studio.selected=hit.id;studio.drag={x:p.x-hit.x,y:p.y-hit.y};c.setPointerCapture(e.pointerId);selection();}});
-window.addEventListener('pointermove',e=>{if(!studio.drag)return;let p=point(e),el=studio.items.find(x=>x.id===studio.selected);if(!el)return;el.x=p.x-studio.drag.x;el.y=p.y-studio.drag.y;
- if(el.snap){
-  const targets=studio.items.filter(other=>other.id!==el.id&&(el.snapTarget==='all'||!el.snapTarget||String(other.id)===String(el.snapTarget)));
-  // Independently snap horizontal and vertical anchor points within 2% of label size.
-  function nearest(axis){const start=axis==='x'?'x':'y',size=axis==='x'?'w':'h';let best=null;
-   for(const other of targets){const theirs=[other[start],other[start]+other[size]/2,other[start]+other[size]];
-    const ours=[0,el[size]/2,el[size]];
-    for(const t of theirs)for(const offset of ours){const pos=t-offset,delta=Math.abs(pos-el[start]);if(delta<=2&&(!best||delta<best.delta))best={pos,delta};}}
-   if(best)el[start]=best.pos;
-  }
-  nearest('x');nearest('y');
- }$('px').value=el.x.toFixed(1);$('py').value=el.y.toFixed(1);render();});
-window.addEventListener('pointerup',()=>studio.drag=null);window.addEventListener('pointercancel',()=>studio.drag=null);
+c.addEventListener('pointerdown',e=>{
+ const p=point(e);const current=activeBounds();
+ const threshold=1.9;
+ if(current){
+  const corners={nw:[current.x,current.y],ne:[current.x+current.w,current.y],sw:[current.x,current.y+current.h],se:[current.x+current.w,current.y+current.h]};
+  const corner=Object.keys(corners).find(k=>Math.abs(p.x-corners[k][0])<threshold&&Math.abs(p.y-corners[k][1])<threshold);
+  if(corner){studio.drag={mode:'resize',corner,start:p,bounds:{...current},background:backgroundSelected};c.setPointerCapture(e.pointerId);return;}
+ }
+ const hit=studio.items.slice().reverse().find(el=>p.x>=el.x-2&&p.x<=el.x+el.w+2&&p.y>=el.y-2&&p.y<=el.y+Math.max(el.h,5)+2);
+ if(hit){backgroundSelected=false;studio.selected=hit.id;studio.drag={mode:'move',x:p.x-hit.x,y:p.y-hit.y};c.setPointerCapture(e.pointerId);selection();}
+ else if(finished){backgroundSelected=true;studio.selected=null;backgroundBounds=backgroundBounds||{x:0,y:0,w:100,h:100};studio.drag={mode:'move',x:p.x-backgroundBounds.x,y:p.y-backgroundBounds.y,background:true};c.setPointerCapture(e.pointerId);selection();}
+ else{backgroundSelected=false;studio.selected=null;selection();}
+});
+window.addEventListener('pointermove',e=>{
+ if(!studio.drag)return;const p=point(e),d=studio.drag;
+ const el=d.background?backgroundBounds:studio.items.find(x=>x.id===studio.selected);if(!el)return;
+ if(d.mode==='resize'){
+  const b=d.bounds,dx=p.x-d.start.x,dy=p.y-d.start.y;
+  const left=d.corner.includes('w')?b.x+dx:b.x,right=d.corner.includes('e')?b.x+b.w+dx:b.x+b.w;
+  const top=d.corner.includes('n')?b.y+dy:b.y,bottom=d.corner.includes('s')?b.y+b.h+dy:b.y+b.h;
+  const min=1;el.x=Math.min(left,right-min);el.y=Math.min(top,bottom-min);el.w=Math.max(min,right-left);el.h=Math.max(min,bottom-top);
+  if(!d.background&&['qr','square','circle'].includes(el.type)){const ratio=dims().w_px/dims().h_px;el.h=el.w*ratio;}
+  if(!d.background&&$('aspectlock')?.checked&& !['qr','square','circle'].includes(el.type)){const ratio=b.h/Math.max(1,b.w);el.h=el.w*ratio;}
+ }else{el.x=p.x-d.x;el.y=p.y-d.y;}
+ if(!d.background){for(const [id,key] of [['px','x'],['py','y'],['pw','w'],['ph','h']])$(id).value=Number(el[key]).toFixed(1);}
+ render();updateResizeOverlay();
+});
+window.addEventListener('pointerup',()=>studio.drag=null);
+window.addEventListener('pointercancel',()=>studio.drag=null);
+window.addEventListener('resize',updateResizeOverlay);
 document.addEventListener('keydown',e=>{const el=studio.items.find(x=>x.id===studio.selected);if(!el||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;const moves={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};if(moves[e.key]){e.preventDefault();el.x+=moves[e.key][0]*(e.shiftKey?0.1:1);el.y+=moves[e.key][1]*(e.shiftKey?0.1:1);selection();}});
 
 // Custom font registry. Font bytes travel with editable JSON projects.
