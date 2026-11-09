@@ -332,10 +332,16 @@ const resizeOverlay=document.createElement('div');
 resizeOverlay.style.cssText='position:absolute;pointer-events:none;border:2px dashed #1685f5;box-sizing:border-box;display:none;z-index:3';
 const previewParent=c.parentElement;previewParent.style.position='relative';previewParent.appendChild(resizeOverlay);
 const resizeHandles=['nw','ne','sw','se'].map(corner=>{const h=document.createElement('span');h.dataset.corner=corner;h.style.cssText='position:absolute;width:12px;height:12px;background:#fff;border:2px solid #1685f5;border-radius:3px;box-sizing:border-box;pointer-events:none;';h.style.left=corner.includes('w')?'-7px':'calc(100% - 5px)';h.style.top=corner.includes('n')?'-7px':'calc(100% - 5px)';resizeOverlay.appendChild(h);return h;});
+const rotateHandle=document.createElement('span');
+rotateHandle.title='Drag to rotate selected item';
+rotateHandle.style.cssText='position:absolute;right:-27px;top:-27px;width:16px;height:16px;border:2px solid #1685f5;background:#fff;border-radius:50%;box-sizing:border-box;pointer-events:none;display:none;';
+rotateHandle.innerHTML='<span style="position:absolute;left:3px;top:-1px;color:#1685f5;font-size:12px">↻</span>';
+resizeOverlay.appendChild(rotateHandle);
 let backgroundBounds=null,backgroundSelected=false;
 function activeBounds(){return backgroundSelected&&finished?(backgroundBounds||{x:0,y:0,w:100,h:100}):studio.items.find(el=>el.id===studio.selected);}
 function updateResizeOverlay(){
  const b=activeBounds();if(!b){resizeOverlay.style.display='none';return;}
+ rotateHandle.style.display=backgroundSelected?'none':'block';
  const rect=c.getBoundingClientRect(),pr=previewParent.getBoundingClientRect();
  resizeOverlay.style.display='block';resizeOverlay.style.left=(rect.left-pr.left+b.x*rect.width/100)+'px';resizeOverlay.style.top=(rect.top-pr.top+b.y*rect.height/100)+'px';
  resizeOverlay.style.width=(b.w*rect.width/100)+'px';resizeOverlay.style.height=(b.h*rect.height/100)+'px';
@@ -344,6 +350,16 @@ function point(e){let r=c.getBoundingClientRect();return {x:(e.clientX-r.left)/r
 c.addEventListener('pointerdown',e=>{
  const p=point(e);const current=activeBounds();
  const threshold=1.9;
+ if(current&&!backgroundSelected){
+  const rect=c.getBoundingClientRect(),sx=100/rect.width,sy=100/rect.height;
+  const handleX=current.x+current.w+19*sx,handleY=current.y-19*sy;
+  if(Math.abs((p.x-handleX)/sx)<15&&Math.abs((p.y-handleY)/sy)<15){
+   const cx=(current.x+current.w/2)*rect.width/100,cy=(current.y+current.h/2)*rect.height/100;
+   const startAngle=Math.atan2((p.y*rect.height/100)-cy,(p.x*rect.width/100)-cx);
+   studio.drag={mode:'rotate',startAngle,initialRotation:Number(current.rotate)||0,centerX:cx,centerY:cy};
+   c.setPointerCapture(e.pointerId);return;
+  }
+ }
  if(current){
   const corners={nw:[current.x,current.y],ne:[current.x+current.w,current.y],sw:[current.x,current.y+current.h],se:[current.x+current.w,current.y+current.h]};
   const corner=Object.keys(corners).find(k=>Math.abs(p.x-corners[k][0])<threshold&&Math.abs(p.y-corners[k][1])<threshold);
@@ -357,6 +373,13 @@ c.addEventListener('pointerdown',e=>{
 window.addEventListener('pointermove',e=>{
  if(!studio.drag)return;const p=point(e),d=studio.drag;
  const el=d.background?backgroundBounds:studio.items.find(x=>x.id===studio.selected);if(!el)return;
+ if(d.mode==='rotate'){
+  const rect=c.getBoundingClientRect();
+  const angle=Math.atan2(p.y*rect.height/100-d.centerY,p.x*rect.width/100-d.centerX);
+  el.rotate=Math.round((d.initialRotation+(angle-d.startAngle)*180/Math.PI)*10)/10;
+  $('protate').value=el.rotate;
+  render();return;
+ }
  if(d.mode==='resize'){
   const b=d.bounds,dx=p.x-d.start.x,dy=p.y-d.start.y;
   const left=d.corner.includes('w')?b.x+dx:b.x,right=d.corner.includes('e')?b.x+b.w+dx:b.x+b.w;
