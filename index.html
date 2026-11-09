@@ -213,7 +213,7 @@ $('download').onclick=()=>{render();let a=document.createElement('a');a.href=c.t
 function askExportName(defaultBase,ext){
  const raw=prompt('Save as — enter a file name:',defaultBase);
  if(raw===null)return null;
- const cleaned=raw.trim().replace(/[\\/:*?"<>|\\x00-\\x1f]/g,'_').replace(/[. ]+$/,'');
+ const cleaned=raw.trim().replace(/[\/:*?"<>|\x00-\x1f]/g,'_').replace(/[. ]+$/,'');
  if(!cleaned){alert('Please enter a file name.');return null;}
  return cleaned.replace(new RegExp('\\\\.'+ext+'$','i'),'')+'.'+ext;
 }
