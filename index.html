@@ -331,7 +331,24 @@ function fitSelectedContent(){
  selection();status('Text bounds fitted. Center horizontally or vertically to align the artwork.');
 }
 $('fitSelectedContent').onclick=fitSelectedContent;
-function centerSelected(axis){const el=studio.items.find(x=>x.id===studio.selected);if(!el)return;if(axis!=='y')el.x=(100-el.w)/2;if(axis!=='x')el.y=(100-el.h)/2;selection();}
+function visibleContentCenter(el){
+ const d=dims(),w=el.w*d.w_px/100,h=el.h*d.h_px/100;
+ const b=contentInkBounds(el);
+ // Measure the visible ink for text, not the larger editable text box.
+ const dx=b?(b.left+b.right)/2-w/2:0;
+ const dy=b?(b.top+b.bottom)/2-h/2:0;
+ const angle=(Number(el.rotate)||0)*Math.PI/180;
+ const rotatedX=dx*Math.cos(angle)-dy*Math.sin(angle);
+ const rotatedY=dx*Math.sin(angle)+dy*Math.cos(angle);
+ return {x:el.x+el.w/2+rotatedX/d.w_px*100,y:el.y+el.h/2+rotatedY/d.h_px*100};
+}
+function centerSelected(axis){
+ const el=studio.items.find(x=>x.id===studio.selected);if(!el)return;
+ const visible=visibleContentCenter(el);
+ if(axis!=='y')el.x+=50-visible.x;
+ if(axis!=='x')el.y+=50-visible.y;
+ selection();status('Centered visible artwork on the label.');
+}
 $('centerItemX').onclick=()=>centerSelected('x');
 $('centerItemY').onclick=()=>centerSelected('y');
 $('centerItemBoth').onclick=()=>centerSelected('both');
@@ -434,8 +451,9 @@ window.addEventListener('pointermove',e=>{
  }else{
   el.x=p.x-d.x;el.y=p.y-d.y;
   if(!d.background){
-   if(el.snapCenterX!==false&&Math.abs(el.x+el.w/2-50)<=2.5)el.x=(100-el.w)/2;
-   if(el.snapCenterY!==false&&Math.abs(el.y+el.h/2-50)<=2.5)el.y=(100-el.h)/2;
+   const visible=visibleContentCenter(el);
+   if(el.snapCenterX!==false&&Math.abs(visible.x-50)<=2.5)el.x+=50-visible.x;
+   if(el.snapCenterY!==false&&Math.abs(visible.y-50)<=2.5)el.y+=50-visible.y;
   }
  }
  if(!d.background){for(const [id,key] of [['px','x'],['py','y'],['pw','w'],['ph','h']])$(id).value=Number(el[key]).toFixed(1);}
