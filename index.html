@@ -16,15 +16,15 @@ aria-label="Support development with a voluntary donation">☕ Support Developme
 <div class="tools"><button id="addtext">+ Text</button><button id="addline">+ Line</button><button id="addrect">+ Rectangle</button><button id="addsquare">+ Square</button><button id="addcircle">+ Circle</button><button id="addellipse">+ Ellipse</button><button id="addtriangle">+ Triangle</button><button id="addhexagon">+ Hexagon</button><button id="addqr">+ QR</button><button id="addimage">+ Image</button></div>
 <details id="vialCalc" style="margin:12px 0;padding:12px;border:1px solid #5b7595;border-radius:10px">
 <summary style="cursor:pointer;font-weight:700">Vial Calc</summary>
-<small>Calculate concentration and sample volume for lab labels. Enter the final solution volume in the vial.</small>
+<small>Enter the final solution volume in the vial. The U-100 scale uses 100 units per mL.</small>
 <div class="grid">
 <div><label for="vialMass">Vial amount (mg)</label><input id="vialMass" type="number" min="0" step="any"></div>
 <div><label for="vialVolume">Final vial volume (mL)</label><input id="vialVolume" type="number" min="0" step="any"></div>
-<div><label for="vialTarget">Sample amount (mg, optional)</label><input id="vialTarget" type="number" min="0" step="any"></div>
+<div><label for="vialTarget">Target amount (mg, optional)</label><input id="vialTarget" type="number" min="0" step="any"></div>
 </div>
 <p id="vialResult" role="status" class="hint"></p>
 <button id="vialConcentrationLayer" type="button" class="secondary" disabled>Add concentration layer</button>
-<button id="vialSampleLayer" type="button" class="secondary" disabled>Add sample volume layer</button>
+<button id="vialSampleLayer" type="button" class="secondary" disabled>Add U-100 conversion layer</button>
 <small>Linked layers update as you edit the numbers. Position and style them like other text layers. Use Export editable project to save the calculator and its layers together.</small>
 </details>
 <input type="file" id="elementfile" accept="image/*" hidden>
@@ -633,20 +633,23 @@ function restoreVialInputs(values){
 }
 function calculateVial({vialMass,vialVolume,vialTarget}){
  const mass=Number(vialMass),volume=Number(vialVolume),target=Number(vialTarget);
- const concentration=mass/volume,sample=target/concentration;
+ const concentration=mass/volume;
+ const units=(target/concentration)*100;
  const format=value=>String(Number(value.toPrecision(6)));
  const positive=value=>Number.isFinite(value)&&value>0;
+ const validVial=positive(mass)&&positive(volume)&&positive(concentration);
+ const validTarget=validVial&&positive(target)&&target<=mass&&positive(units);
+ const exceedsCapacity=validTarget&&units>100+100*Number.EPSILON;
  return {
-  concentration:positive(mass)&&positive(volume)&&positive(concentration)
-   ? 'Concentration '+format(concentration)+' mg/mL':'',
-  sample:positive(mass)&&positive(volume)&&positive(concentration)&&target<=mass&&positive(sample)
-   ? format(target)+' mg sample = '+format(sample)+' mL':''
+  concentration:validVial?'Concentration '+format(concentration)+' mg/mL':'',
+  sample:validTarget&&!exceedsCapacity?format(target)+' mg = '+format(units)+' units (U-100)':'',
+  capacityMessage:exceedsCapacity?format(units)+' units exceeds a 100-unit syringe’s capacity.':''
  };
 }
 function refreshVialCalc(){
  const inputs=vialInputs(),values=calculateVial(inputs);
  const message=!values.concentration?'Enter a positive vial amount and final volume.':
-  inputs.vialTarget&&!values.sample?'Enter a positive sample amount no greater than the vial amount.':'';
+  values.capacityMessage||(inputs.vialTarget&&!values.sample?'Enter a positive target amount no greater than the vial amount.':'');
  $('vialResult').textContent=[values.concentration,values.sample,message].filter(Boolean).join(' · ');
  $('vialConcentrationLayer').disabled=!values.concentration;
  $('vialSampleLayer').disabled=!values.sample;
