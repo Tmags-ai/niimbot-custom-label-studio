@@ -79,8 +79,8 @@ pre{overflow:auto;background:#142b47;color:#f4f8fd;padding:1rem;border-radius:.5
 <h3>Add, select, and arrange layers</h3>
 <ol>
 <li>Use <strong>+ Text</strong>, <strong>+ QR</strong>, <strong>+ Image</strong>, or a line or shape button to add an item. Each item has its own position, size, rotation, and ribbon assignment.</li>
-<li>Click an item in the preview or select it in <strong>Layers</strong>. Use the arrows in the layer list to change which objects cover others. Put a background shape below the text or images it should sit behind.</li>
-<li>Drag the item or enter <strong>X (%)</strong> and <strong>Y (%)</strong> for placement. Use arrow keys for small nudges. Drag a resize handle or enter <strong>Width (%)</strong> and <strong>Height (%)</strong>. Keep aspect ratio checked for proportional resizing. Use <strong>Reset selected item size &amp; aspect ratio</strong> to recover the item’s starting proportions and size.</li>
+<li>Click an item in the preview or select it in <strong>Layers</strong> below the live preview. Use the arrows in the layer list to change which objects cover others. Put a background shape below the text or images it should sit behind.</li>
+<li>Drag the item, or open <strong>Advanced positioning and size</strong> to enter exact <strong>X (%)</strong> and <strong>Y (%)</strong> values. Use arrow keys for small nudges. Drag a resize handle or enter <strong>Width (%)</strong> and <strong>Height (%)</strong>. Keep aspect ratio checked for proportional resizing. Use <strong>Reset selected item size &amp; aspect ratio</strong> to recover the item’s starting proportions and size.</li>
 <li>Use <strong>Center horizontally</strong>, <strong>Center vertically</strong>, or <strong>Center both</strong> to center the visible artwork. For drag alignment, use the label-center snap controls or enable <strong>Snap to another layer</strong> and choose a target under <strong>Align with layer</strong>.</li>
 <li>Use <strong>Duplicate</strong> to reuse a styled item or <strong>Delete</strong> to remove the selection. <strong>Clear layers</strong> clears the custom design.</li>
 </ol>
@@ -94,14 +94,14 @@ pre{overflow:auto;background:#142b47;color:#f4f8fd;padding:1rem;border-radius:.5
 </dl>
 <h3>Print in black and white</h3>
 <ol>
-<li>Keep <strong>✔️ Checked for black and white, unchecked for color</strong> checked. The panel reads <strong>Print this Custom Label Studio design</strong>.</li>
+<li>Choose <strong>Black &amp; White</strong> under <strong>Print mode</strong>. The panel reads <strong>Print this Custom Label Studio design</strong>.</li>
 <li>Use a black ribbon on white labels. The Studio renders your layers together in one pass. Set <strong>Number of identical copies</strong> from 1 to 100.</li>
 <li>Click <strong>Print Label</strong>, confirm the quantity, and inspect one physical label before making more. Use <strong>Download exact print-ready PNG</strong> to inspect the calibrated artwork.</li>
 </ol>
 <h3>Print with multiple ribbons</h3>
 <ol>
 <li>Select each layer and assign its <strong>Ribbon / layer color</strong>. Black, white, gold, red, blue, and green are available.</li>
-<li>Uncheck the print-mode checkbox to show <strong>Multi-ribbon color printing</strong>. Set <strong>Preview</strong> to see all color assignments together or isolate one pass. The colors on screen approximate the ribbons.</li>
+<li>Choose <strong>Multi-Ribbon</strong> under <strong>Print mode</strong> to show <strong>Multi-ribbon color printing</strong>. Set <strong>Preview</strong> to see all color assignments together or isolate one pass. The colors on screen approximate the ribbons.</li>
 <li>Use <strong>Start guided printing</strong> to step through assigned colors, or choose a color manually under <strong>Ribbon installed / print color</strong>. Install that ribbon, enter <strong>Copies per color pass</strong>, and click <strong>Print selected ribbon color</strong>.</li>
 <li>Inspect the pass. Rewind and precisely realign the <strong>same physical labels</strong> before changing ribbons. Keep the same quantity and label order for every pass. In the guide, choose <strong>Next color / step</strong> only after checking the physical output. Repeat for the remaining colors.</li>
 <li>Test with one spare label first. When an edge or alignment looks off, choose the relevant ribbon and download its print-ready PNG for comparison.</li>
@@ -111,7 +111,7 @@ pre{overflow:auto;background:#142b47;color:#f4f8fd;padding:1rem;border-radius:.5
 <li>In <strong>Custom Label</strong>, open <strong>Vial Calc</strong> below the layer buttons.</li>
 <li>Enter <strong>Vial amount (mg)</strong> and <strong>Final vial volume (mL)</strong>. Use the total volume of the finished solution. The calculator divides the amount by the final volume to show the concentration in mg/mL.</li>
 <li>To show a conversion, enter a <strong>Target amount (mg, optional)</strong>. Vial Calc displays the equivalent volume on the U-100 scale, which uses 100 markings per mL. The target must be positive and within the vial amount. If the conversion exceeds 100 units, the calculator flags it and leaves the conversion layer blank.</li>
-<li>Click <strong>Add concentration layer</strong>, <strong>Add U-100 conversion layer</strong>, or both. Move, resize, and style the results like other text layers. The calculator shows <strong>(U-100)</strong> beside the conversion, and the linked layer uses the shorter <strong>mg = units</strong> format.</li>
+<li>Click <strong>Add concentration layer</strong> or <strong>Add U-100 conversion layer</strong> for one result, or <strong>Add both to label</strong> for both. Use <strong>Select layer</strong> beside a linked result to jump to its editing controls. Move, resize, and style the results like other text layers. The calculator shows <strong>(U-100)</strong> beside the conversion, and the linked layer uses the shorter <strong>mg = units</strong> format.</li>
 <li>Edit the numbers in Vial Calc to update any linked layers. Their position and styling stay in place. An invalid input clears the affected layer text until the result is valid again.</li>
 <li>Use <strong>Export editable project</strong> to save the calculator inputs and linked layers together. Reopen the JSON with <strong>Import project</strong> to change the numbers later.</li>
 </ol>
@@ -177,7 +177,7 @@ Product B,20 mg,LOT-002,2</code></pre>
 <h3>Print, stop, and recover</h3>
 <ol>
 <li>Connect a verified printer over Bluetooth for the batch workflow and make sure the roll has enough labels. For a test run, set <strong>Rows to print</strong> to 1 and make sure that row’s copy count is 1. The field prints the first N data rows. Leave it blank for all rows.</li>
-<li>Click <strong>Print batch</strong> and read the confirmation prompt for the number of rows and total labels. Inspect the test print and scan any QR code before committing to the full run.</li>
+<li>Review the row count, label total, and any unmatched placeholders beside <strong>Print batch</strong>. Then click <strong>Print batch</strong> and read the confirmation prompt for the number of rows and total labels. Inspect the test print and scan any QR code before committing to the full run.</li>
 <li>Watch the progress status. <strong>Stop after current label</strong> requests a stop after the current print job finishes, so the remaining copies in that job may still print.</li>
 <li>If interrupted, count the labels physically printed before restarting. To resume from a later row, make a fresh CSV with the same header and only the remaining rows or copies. Upload it, preview the first remaining row, and confirm the new total before printing.</li>
 <li>After the run, review the completion status and check the physical output. The app restores the original placeholder design when the run ends.</li>
