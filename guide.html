@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Step-by-step instructions for setting up NIIMBOT Custom Label Studio, designing labels, and printing individual labels or CSV batches.">
+<title>User Guide | NIIMBOT Custom Label Studio</title>
+<style>
+:root{color-scheme:light;--paper:#f4f6f9;--ink:#152337;--muted:#465a70;--line:#cdd8e5;--blue:#164e8c;--navy:#10243e}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:1rem/1.65 system-ui,sans-serif}
+a{color:var(--blue);text-underline-offset:.19em}a:focus-visible{outline:3px solid #d18400;outline-offset:4px}
+.wrap{width:min(70rem,calc(100% - 2rem));margin-inline:auto}.hero{background:var(--navy);color:white;padding:1.3rem 0 3.5rem}
+.brand{color:#bfd7f1;font-weight:750}.hero h1{font-size:clamp(2rem,6vw,3.75rem);line-height:1.05;max-width:18ch;margin:2rem 0 1rem}
+.hero p{max-width:58ch;color:#d0e0f2}.button{display:inline-block;background:#ffdb73;color:#152337;padding:.55rem 1rem;border-radius:.5rem;font-weight:750;text-decoration:none}
+.layout{display:grid;grid-template-columns:13.5rem minmax(0,1fr);gap:2rem;align-items:start;padding:2rem 0 3rem}
+nav{position:sticky;top:1rem;border-left:2px solid var(--line);padding-left:1rem}nav strong{display:block;margin-bottom:.4rem}nav a{display:block;padding:.35rem 0}
+article{background:white;padding:clamp(1rem,4vw,2.3rem);border:1px solid var(--line);border-radius:1rem;margin-bottom:1.5rem;scroll-margin-top:1rem}
+h2,h3,h4{line-height:1.25}h2{font-size:clamp(1.45rem,4vw,2rem);margin:0 0 .4rem}h3{margin:1.6rem 0 .55rem}h4{margin:1rem 0 .35rem}p{margin:.6rem 0}li+li{margin-top:.45rem}ol,ul{padding-left:1.4rem}
+.open{font-weight:700}.note{background:#eaf2fb;border-left:4px solid #3a72a9;padding:.75rem 1rem;margin:1rem 0}.note p:first-child{margin-top:0}.note p:last-child{margin-bottom:0}
+dl{margin:.65rem 0}dt{font-weight:750;margin-top:.65rem}dd{margin:0;color:var(--muted)}code{font-size:.92em;background:#eef2f7;padding:.1em .25em;border-radius:.25em;overflow-wrap:anywhere}
+pre{overflow:auto;background:#142b47;color:#f4f8fd;padding:1rem;border-radius:.5rem}pre code{background:none;padding:0;overflow-wrap:normal}footer{border-top:1px solid var(--line);padding:1rem 0 2rem}
+@media(max-width:720px){.layout{grid-template-columns:1fr;gap:1rem}nav{position:static}.hero{padding-bottom:2rem}}
+@media print{.hero{background:white;color:black;padding:0}.hero p,.brand{color:black}.button,nav,.open,footer{display:none}.layout{display:block;padding:0}.wrap{width:auto}article{padding:0;border:0}h2,h3,h4{break-after:avoid}}
+</style>
+</head>
+<body>
+<header class="hero" id="top"><div class="wrap">
+<a class="brand" href="./index.html">NIIMBOT Custom Label Studio</a>
+<h1>Custom Label Studio guide</h1>
+<p>Connect your printer, build or import a label, and print a test copy before running a batch or a multi-ribbon job.</p>
+<a class="button" href="./index.html">Open Label Studio</a>
+</div></header>
+<div class="wrap layout">
+<nav aria-label="Guide sections">
+<strong>On this page</strong>
+<a href="#printer-setup">Printer &amp; Setup</a>
+<a href="#custom-label">Custom Label</a>
+<a href="#import-label">Import Label</a>
+<a href="#quick-template">Quick Template</a>
+<a href="#batch-printing">Batch Printing</a>
+</nav>
+<main>
+<article id="printer-setup">
+<h2>Printer &amp; Setup</h2>
+<a class="open" href="./index.html?tab=setup">Open Printer &amp; Setup</a>
+<h3>Connect the printer</h3>
+<ol>
+<li>Load the label roll, turn on the printer, and open the Studio in Chrome or Edge on Windows. Use the published HTTPS page or localhost.</li>
+<li><strong>Bluetooth:</strong> Click <strong>Connect Bluetooth</strong>, select the printer in the browser’s device chooser, and connect. If it is missing, check that Bluetooth is on, the printer is nearby, and another app has released its connection. Open the chooser again. Use <strong>Disconnect</strong> when you need to release the Bluetooth connection.</li>
+<li><strong>USB for the M2-H:</strong> Plug in a USB data cable, click <strong>Connect USB (M2-H)</strong>, and choose the printer’s serial port. Confirm the USB indicator says connected. If no port appears, try a different data cable or port and close other apps that may be using the connection. Use <strong>Disconnect USB</strong> to release it.</li>
+<li>Check the connection status and detected model before printing. <strong>Experimental printer test mode</strong> allows one label per job on an unverified printer. Batch and multi-ribbon printing require a verified printer profile.</li>
+</ol>
+<h3>Read diagnostics</h3>
+<dl>
+<dt>Read RFID status</dt><dd>Reads the connected Bluetooth printer’s consumable response when supported. Depending on firmware, it can show fields such as used paper, capacity, and print limit. Compare readings before and after a single test print. The app may report a field as unavailable or its meaning as unverified.</dd>
+<dt>Read USB counters (read-only)</dt><dd>Reads diagnostic values via the M2-H USB connection. Check the USB status area for the result.</dd>
+<dt>Refresh diagnostics</dt><dd>Updates the displayed printer, available roll-counter reading, change since the previous reading, and Studio session count.</dd>
+<dt>Physical labels used per print job</dt><dd>Enter an estimate for tracking and compare it with the physical output. The session count tracks successful print commands, while one command can request multiple labels. RFID reads leave the roll data intact.</dd>
+<dt>Reset session count</dt><dd>Clears the Studio’s local tracking for a fresh comparison.</dd>
+</dl>
+<h3>Set the label size and print quality</h3>
+<ol>
+<li>Choose a <strong>Label size preset</strong> matching the roll packaging. For another size choose <strong>Custom size</strong> and enter width and length in millimeters. The M2-H custom controls accept 20–50 mm width and 8–240 mm length. Test long labels on the actual printer.</li>
+<li>Set <strong>Orientation</strong> in the printer banner to <strong>Landscape</strong> or <strong>Portrait</strong>. The selected size and orientation carry across tabs. Use the circle preset when you want a circular print mask.</li>
+<li>Start with <strong>Print density</strong> at 3. For USB, the <strong>USB print sharpness</strong> threshold defaults to 114. Lower it when fine letters look heavy or increase it when light details disappear. Change one setting at a time and compare test labels.</li>
+<li>For Bluetooth, start with <strong>Paced (safer)</strong>. <strong>Automatic</strong> lets the driver choose. <strong>Acknowledged</strong> is slower and <strong>Fast</strong> is experimental.</li>
+</ol>
+<h3>Calibrate the physical print</h3>
+<p><strong>Artwork size (%)</strong> and <strong>Horizontal/Vertical shift (mm)</strong> apply to the print output. Start with the M2-H defaults of 100%, 0 mm horizontal and −0.5 mm vertical. Print one test after each adjustment. Use <strong>Reset print alignment</strong> to restore those defaults.</p>
+<p>If the top edge has a gap, try a single print at −1.0 mm vertical shift and compare it with <strong>Download exact print-ready PNG</strong> in Custom Label. If the exported artwork reaches the top but the physical print still has a white strip, the leading edge may be outside the printable area.</p>
+</article>
+
+<article id="custom-label">
+<h2>Custom Label</h2>
+<a class="open" href="./index.html?tab=studio">Open Custom Label</a>
+<h3>Set up the canvas</h3>
+<p>Use the shared <strong>Label setup</strong> and <strong>Orientation</strong> controls to match the roll. Use <strong>Rotation</strong> for whole-design print rotation. Use <strong>Layer rotation (degrees)</strong> to turn just one selected item. The live preview shows the printable label. Artwork that extends beyond its edge is clipped.</p>
+<h3>Add, select, and arrange layers</h3>
+<ol>
+<li>Use <strong>+ Text</strong>, <strong>+ QR</strong>, <strong>+ Image</strong>, or a line or shape button to add an item. Each item has its own position, size, rotation, and ribbon assignment.</li>
+<li>Click an item in the preview or select it in <strong>Layers</strong>. Use the arrows in the layer list to change which objects cover others. Put a background shape below the text or images it should sit behind.</li>
+<li>Drag the item or enter <strong>X (%)</strong> and <strong>Y (%)</strong> for placement. Use arrow keys for small nudges. Drag a resize handle or enter <strong>Width (%)</strong> and <strong>Height (%)</strong>. Keep aspect ratio checked for proportional resizing. Use <strong>Reset selected item size &amp; aspect ratio</strong> to recover the item’s starting proportions and size.</li>
+<li>Use <strong>Center horizontally</strong>, <strong>Center vertically</strong>, or <strong>Center both</strong> to center the visible artwork. For drag alignment, use the label-center snap controls or enable <strong>Snap to another layer</strong> and choose a target under <strong>Align with layer</strong>.</li>
+<li>Use <strong>Duplicate</strong> to reuse a styled item or <strong>Delete</strong> to remove the selection. <strong>Clear layers</strong> clears the custom design.</li>
+</ol>
+<h3>Adjust each layer</h3>
+<dl>
+<dt>Text</dt><dd>Type in <strong>Selected content / QR value</strong>. Press Enter for a new line. Choose the font, point size, and bold setting. <strong>Text alignment</strong> offers Left, Center, Right, and Justify. Justify spreads words across eligible lines and leaves the final line left-aligned. Widen or enlarge the box if text scales down too far. Use <strong>Auto-fit selection to text/image</strong> to trim unused space around text. Import a custom font with a supported TTF, OTF, WOFF, or WOFF2 file.</dd>
+<dt>QR code</dt><dd>Enter the URL or value in <strong>Selected content / QR value</strong>. Give the code and its surrounding blank space enough room, then scan a test print with a phone.</dd>
+<dt>Images</dt><dd>Choose <strong>+ Image</strong> and select an image file. Resize it with aspect ratio locked when you want to preserve proportions. For white artwork on a transparent PNG, select <strong>Use light pixels as printable ink</strong> as appropriate and check the preview before printing.</dd>
+<dt>Lines and shapes</dt><dd>Select a shape and choose <strong>Shape fill</strong> for outline-only or solid artwork. Set the outline style and thickness in millimeters. Use corner radius where supported.</dd>
+<dt>Ink and ribbon</dt><dd><strong>Ribbon / layer color</strong> assigns the object to a physical ribbon pass. <strong>Object color</strong>, <strong>Shape fill</strong>, and <strong>Invert black / white</strong> affect how the object renders. For white lettering in a monochrome design, place it above a solid dark background and preview the result.</dd>
+</dl>
+<h3>Print in black and white</h3>
+<ol>
+<li>Keep <strong>✔️ Checked for black and white, unchecked for color</strong> checked. The panel reads <strong>Print this Custom Label Studio design</strong>.</li>
+<li>Use a black ribbon on white labels. The Studio renders your layers together in one pass. Set <strong>Number of identical copies</strong> from 1 to 100.</li>
+<li>Click <strong>Print Label</strong>, confirm the quantity, and inspect one physical label before making more. Use <strong>Download exact print-ready PNG</strong> to inspect the calibrated artwork.</li>
+</ol>
+<h3>Print with multiple ribbons</h3>
+<ol>
+<li>Select each layer and assign its <strong>Ribbon / layer color</strong>. Black, white, gold, red, blue, and green are available.</li>
+<li>Uncheck the print-mode checkbox to show <strong>Multi-ribbon color printing</strong>. Set <strong>Preview</strong> to see all color assignments together or isolate one pass. The colors on screen approximate the ribbons.</li>
+<li>Use <strong>Start guided printing</strong> to step through assigned colors, or choose a color manually under <strong>Ribbon installed / print color</strong>. Install that ribbon, enter <strong>Copies per color pass</strong>, and click <strong>Print selected ribbon color</strong>.</li>
+<li>Inspect the pass. Rewind and precisely realign the <strong>same physical labels</strong> before changing ribbons. Keep the same quantity and label order for every pass. In the guide, choose <strong>Next color / step</strong> only after checking the physical output. Repeat for the remaining colors.</li>
+<li>Test with one spare label first. When an edge or alignment looks off, choose the relevant ribbon and download its print-ready PNG for comparison.</li>
+</ol>
+<h3>Save and reopen an editable design</h3>
+<p>Use <strong>Export editable project</strong> to save the design as JSON, including editable layers and any imported background or custom fonts. Use <strong>Import project</strong> to reopen it. Export your current design before replacing it with another project. A PNG is useful for inspecting or sharing the finished artwork, while JSON lets you edit the individual layers again.</p>
+</article>
+
+<article id="import-label">
+<h2>Import Label</h2>
+<a class="open" href="./index.html?tab=import">Open Import Label</a>
+<h3>Bring in artwork from Canva or another design app</h3>
+<ol>
+<li>Export at the physical label’s proportions. In Canva, choose <strong>Share → Download → PNG</strong> or <strong>PDF Print</strong>. The Studio accepts PNG, JPG/JPEG, WebP, and PDF. PDF import uses the first page and needs internet access for the PDF renderer.</li>
+<li>Set the shared label size and orientation to match your roll. In <strong>Import Label</strong>, select the file under <strong>Upload Canva export / preconfigured label</strong> and check the live preview.</li>
+<li>Choose <strong>Artwork fit</strong>. <strong>Fit entire design (no cropping)</strong> preserves the complete artwork and can leave margins. <strong>Fill label (crop edges if necessary)</strong> fills the preview while preserving proportions. <strong>Stretch to label size</strong> fills it by adjusting width and height independently.</li>
+<li>To position artwork yourself, select it in the preview, drag it, or drag a corner to resize. Keep aspect ratio checked to preserve its shape. Use <strong>Auto-fit imported label to page</strong> or <strong>Reset imported label size &amp; aspect ratio</strong> to recover a fitted layout. Use <strong>Remove imported label</strong> to clear the background.</li>
+<li>Set <strong>Number of identical copies</strong> (1–100), click <strong>Print imported label copies</strong>, and confirm. This workflow sends monochrome output. Print one test before increasing the count.</li>
+</ol>
+<div class="note">
+<p><strong>You can add editable layers on top of an imported label.</strong></p>
+<p>Leave the artwork loaded, switch to <strong>Custom Label</strong>, and add text, QR codes, shapes, or images. Adjust the new layers in the preview. To print the combined design, return to <strong>Import Label</strong> and use <strong>Print imported label copies</strong>. To reopen the combined design later, use <strong>Export editable project</strong> in Custom Label.</p>
+</div>
+</article>
+
+<article id="quick-template">
+<h2>Quick Template</h2>
+<a class="open" href="./index.html?tab=quick">Open Quick Template</a>
+<ol>
+<li>Set the shared label size and orientation. If a custom design or imported background is loaded, export it as an editable project first, then clear those layers or remove the imported background.</li>
+<li>Check <strong>Show quick template (headline, details and separator)</strong> to preview the template. Type the main line under <strong>Headline</strong>.</li>
+<li>Enter the remaining information under <strong>Details</strong>, one field per line. For example, put sample ID, lot number, and date on separate lines. Check the preview on small labels and shorten the text or remove lines if needed.</li>
+<li>Use <strong>Show separator line</strong> to add or remove the divider. Use <strong>Logo / label image (optional)</strong> to add an image. Check legibility at the actual label size.</li>
+<li>Enter <strong>Copies to print</strong> (1–100), click <strong>Print quick template</strong>, and confirm. Start with a single copy. If you were previewing a CSV row, return to Batch Printing and click <strong>Restore design</strong> before printing the quick template.</li>
+</ol>
+</article>
+
+<article id="batch-printing">
+<h2>Batch Printing</h2>
+<a class="open" href="./index.html?tab=batch">Open Batch Printing</a>
+<p>Use one CSV data row per label design. The Studio fills text and QR placeholders from that row and prints the requested number of copies.</p>
+<h3>Prepare the CSV</h3>
+<ol>
+<li>Click <strong>Download CSV template</strong> and open it in Excel or Google Sheets. Keep one header row with unique, nonempty column names. Add one row per product, sample, or lot.</li>
+<li>Use headers suited to your label, such as <code>Product</code>, <code>Strength</code>, <code>LOT</code>, or <code>URL</code>. Optionally add <code>Copies</code> and enter a whole number from 1 to 100 for an individual row. A blank or missing <code>Copies</code> value uses the app’s <strong>Default copies per CSV row</strong>.</li>
+<li>Export as a comma-separated <strong>CSV</strong>. Preserve leading zeros in ID or lot fields by keeping those cells as text in your spreadsheet. Open the exported CSV and check any values that must retain their exact formatting.</li>
+</ol>
+<pre><code>Product,Strength,LOT,Copies
+Product A,10 mg,LOT-001,1
+Product B,20 mg,LOT-002,2</code></pre>
+<p>This example prints one label for Product A and two for Product B.</p>
+<h3>Build a reusable label</h3>
+<ol>
+<li>In <strong>Custom Label</strong>, choose the roll size and build a simple black-and-white layout, or let the CSV upload generate editable fields when the current design has no matching placeholders. Clear any imported background you do not want in the batch.</li>
+<li>In a text layer, enter <code>{{Product}}</code> or combine fixed text with variable fields, such as <code>Lot: {{LOT}}</code>. A QR layer can use <code>{{URL}}</code> if your CSV has a URL column, or embed a field in a larger value such as <code>https://example.com/lot/{{LOT}}</code>.</li>
+<li>Match header spelling and capitalization. Static shapes and images stay in place. Leave enough room for the longest names and codes. If automatic fields overlap existing artwork, use <strong>Restore design</strong> and move or delete those layers in Custom Label.</li>
+</ol>
+<h3>Upload and preview</h3>
+<ol>
+<li>Go to <strong>Batch Printing</strong>, set <strong>Default copies per CSV row</strong>, and select your CSV under <strong>Batch CSV file</strong>. The Studio lists the row count and detected columns, displays the calculated label total, and previews the first data row.</li>
+<li>Enter a row number and click <strong>Preview row</strong>. Row 1 is the first data row after the header. Check rows with long values, blank fields, or QR codes. If a placeholder remains visible, compare it with the column name shown after upload.</li>
+<li>Click <strong>Restore design</strong> before editing or exporting the reusable template. It restores placeholder text and QR values after a preview.</li>
+</ol>
+<h3>Print, stop, and recover</h3>
+<ol>
+<li>Connect a verified printer over Bluetooth for the batch workflow and make sure the roll has enough labels. For a test run, set <strong>Rows to print</strong> to 1 and make sure that row’s copy count is 1. The field prints the first N data rows. Leave it blank for all rows.</li>
+<li>Click <strong>Print batch</strong> and read the confirmation prompt for the number of rows and total labels. Inspect the test print and scan any QR code before committing to the full run.</li>
+<li>Watch the progress status. <strong>Stop after current label</strong> requests a stop after the current print job finishes, so the remaining copies in that job may still print.</li>
+<li>If interrupted, count the labels physically printed before restarting. To resume from a later row, make a fresh CSV with the same header and only the remaining rows or copies. Upload it, preview the first remaining row, and confirm the new total before printing.</li>
+<li>After the run, review the completion status and check the physical output. The app restores the original placeholder design when the run ends.</li>
+</ol>
+</article>
+</main>
+</div>
+<footer><div class="wrap"><a href="#top">Back to top</a> · <a href="./index.html">Open Label Studio</a></div></footer>
+</body>
+</html>
