@@ -642,7 +642,7 @@ function calculateVial({vialMass,vialVolume,vialTarget}){
  const exceedsCapacity=validTarget&&units>100+100*Number.EPSILON;
  return {
   concentration:validVial?'Concentration '+format(concentration)+' mg/mL':'',
-  sample:validTarget&&!exceedsCapacity?format(target)+' mg = '+format(units)+' units (U-100)':'',
+  sample:validTarget&&!exceedsCapacity?format(target)+' mg = '+format(units)+' units':'',
   capacityMessage:exceedsCapacity?format(units)+' units exceeds a 100-unit syringe’s capacity.':''
  };
 }
@@ -650,7 +650,7 @@ function refreshVialCalc(){
  const inputs=vialInputs(),values=calculateVial(inputs);
  const message=!values.concentration?'Enter a positive vial amount and final volume.':
   values.capacityMessage||(inputs.vialTarget&&!values.sample?'Enter a positive target amount no greater than the vial amount.':'');
- $('vialResult').textContent=[values.concentration,values.sample,message].filter(Boolean).join(' · ');
+ $('vialResult').textContent=[values.concentration,values.sample&&values.sample+' (U-100)',message].filter(Boolean).join(' · ');
  $('vialConcentrationLayer').disabled=!values.concentration;
  $('vialSampleLayer').disabled=!values.sample;
  let changed=false;
