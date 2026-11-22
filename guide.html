@@ -35,6 +35,7 @@ pre{overflow:auto;background:#142b47;color:#f4f8fd;padding:1rem;border-radius:.5
 <strong>On this page</strong>
 <a href="#printer-setup">Printer &amp; Setup</a>
 <a href="#custom-label">Custom Label</a>
+<a href="#vial-calc" style="padding-left:1rem">Vial Calc</a>
 <a href="#import-label">Import Label</a>
 <a href="#quick-template">Quick Template</a>
 <a href="#batch-printing">Batch Printing</a>
@@ -104,6 +105,15 @@ pre{overflow:auto;background:#142b47;color:#f4f8fd;padding:1rem;border-radius:.5
 <li>Use <strong>Start guided printing</strong> to step through assigned colors, or choose a color manually under <strong>Ribbon installed / print color</strong>. Install that ribbon, enter <strong>Copies per color pass</strong>, and click <strong>Print selected ribbon color</strong>.</li>
 <li>Inspect the pass. Rewind and precisely realign the <strong>same physical labels</strong> before changing ribbons. Keep the same quantity and label order for every pass. In the guide, choose <strong>Next color / step</strong> only after checking the physical output. Repeat for the remaining colors.</li>
 <li>Test with one spare label first. When an edge or alignment looks off, choose the relevant ribbon and download its print-ready PNG for comparison.</li>
+</ol>
+<h3 id="vial-calc">Use Vial Calc</h3>
+<ol>
+<li>In <strong>Custom Label</strong>, open <strong>Vial Calc</strong> below the layer buttons.</li>
+<li>Enter <strong>Vial amount (mg)</strong> and <strong>Final vial volume (mL)</strong>. Use the total volume of the finished solution. The calculator divides the amount by the final volume to show the concentration in mg/mL.</li>
+<li>To show a conversion, enter a <strong>Target amount (mg, optional)</strong>. Vial Calc displays the equivalent volume on the U-100 scale, which uses 100 markings per mL. The target must be positive and within the vial amount. If the conversion exceeds 100 units, the calculator flags it and leaves the conversion layer blank.</li>
+<li>Click <strong>Add concentration layer</strong>, <strong>Add U-100 conversion layer</strong>, or both. Move, resize, and style the results like other text layers. The calculator shows <strong>(U-100)</strong> beside the conversion, and the linked layer uses the shorter <strong>mg = units</strong> format.</li>
+<li>Edit the numbers in Vial Calc to update any linked layers. Their position and styling stay in place. An invalid input clears the affected layer text until the result is valid again.</li>
+<li>Use <strong>Export editable project</strong> to save the calculator inputs and linked layers together. Reopen the JSON with <strong>Import project</strong> to change the numbers later.</li>
 </ol>
 <h3>Save and reopen an editable design</h3>
 <p>Use <strong>Export editable project</strong> to save the design as JSON, including editable layers and any imported background or custom fonts. Use <strong>Import project</strong> to reopen it. Export your current design before replacing it with another project. A PNG is useful for inspecting or sharing the finished artwork, while JSON lets you edit the individual layers again.</p>
