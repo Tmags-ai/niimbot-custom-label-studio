@@ -14,6 +14,19 @@ aria-label="Support development with a voluntary donation">☕ Support Developme
 </div>
 <small>Layers can extend beyond the printable area; anything outside the label will be clipped when printing. Use X/Y for off-label placement or arrow keys for nudging. Drag objects on the preview. Select a layer to edit its position, size, font and content. Export and import editable projects as JSON.</small>
 <div class="tools"><button id="addtext">+ Text</button><button id="addline">+ Line</button><button id="addrect">+ Rectangle</button><button id="addsquare">+ Square</button><button id="addcircle">+ Circle</button><button id="addellipse">+ Ellipse</button><button id="addtriangle">+ Triangle</button><button id="addhexagon">+ Hexagon</button><button id="addqr">+ QR</button><button id="addimage">+ Image</button></div>
+<details id="vialCalc" style="margin:12px 0;padding:12px;border:1px solid #5b7595;border-radius:10px">
+<summary style="cursor:pointer;font-weight:700">Vial Calc</summary>
+<small>Calculate concentration and sample volume for lab labels. Enter the final solution volume in the vial.</small>
+<div class="grid">
+<div><label for="vialMass">Vial amount (mg)</label><input id="vialMass" type="number" min="0" step="any"></div>
+<div><label for="vialVolume">Final vial volume (mL)</label><input id="vialVolume" type="number" min="0" step="any"></div>
+<div><label for="vialTarget">Sample amount (mg, optional)</label><input id="vialTarget" type="number" min="0" step="any"></div>
+</div>
+<p id="vialResult" role="status" class="hint"></p>
+<button id="vialConcentrationLayer" type="button" class="secondary" disabled>Add concentration layer</button>
+<button id="vialSampleLayer" type="button" class="secondary" disabled>Add sample volume layer</button>
+<small>Linked layers update as you edit the numbers. Position and style them like other text layers. Use Export editable project to save the calculator and its layers together.</small>
+</details>
 <input type="file" id="elementfile" accept="image/*" hidden>
 <div class="grid"><div><label>Label size</label><div class="hint">Set the size in Printer & Setup. The selected dimensions apply here too.</div></div><div><label>Rotation</label><select id="rotation"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select></div></div>
 <label>Layers (select, reorder or remove)</label><div id="layers"></div>
@@ -367,7 +380,7 @@ render=function(){
  }
  finishLabelPreview();
 };
-function selection(){preserveLayerDimensions();syncQrDimensions();const el=studio.items.find(e=>e.id===studio.selected);$('props').style.display=el?'block':'none';if(el){if(['qr','square','circle'].includes(el.type)){const d=dims();el.h=el.w*d.w_px/d.h_px;}$('aspectlock').checked=['qr','square','circle'].includes(el.type)?true:el.aspectLocked!==false;$('aspectlock').disabled=['qr','square','circle'].includes(el.type);$('pribbon').value=ribbonFor(el);$('proptext').value=el.text||'';$('textAlignmentControl').hidden=el.type!=='text';$('palign').value=textAlignment(el.align);for(const [id,key] of [['px','x'],['py','y'],['pw','w'],['ph','h'],['psize','size'],['protate','rotate'],['pradius','radius']])$(id).value=el[key]??0;$('pfont').value=el.font||'Arial';$('pbold').checked=!!el.bold;$('psnap').checked=!!el.snap;$('snapCenterX').checked=el.snapCenterX!==false;$('snapCenterY').checked=el.snapCenterY!==false;$('snaptarget').innerHTML='<option value="all">Nearest layer (automatic)</option>';studio.items.filter(x=>x.id!==el.id).forEach(x=>{const option=document.createElement('option');option.value=String(x.id);option.textContent=x.type+' · '+(x.text||'object').slice(0,25);$('snaptarget').append(option)});$('snaptarget').value=el.snapTarget||'all';$('pcolor').value=el.color||'black';$('pfill').value=el.fill||'none';$('pstroke').value=el.strokeStyle||'solid';$('pimageWhite').checked=!!el.lightInk;$('pimageWhite').disabled=el.type!=='image';$('pstroke').disabled=el.type!=='line'&&!outlinedShapes.includes(el.type);$('pstrokeWidth').disabled=$('pstroke').disabled;$('pstrokeWidth').value=strokeWidthMm(el.strokeWidthMm)??'';$('pinvert').checked=!!el.invert;$('protate').value=el.rotate||0;$('pradius').value=el.radius||0;}$('layers').innerHTML='';studio.items.slice().reverse().forEach(el=>{let div=document.createElement('div');div.className='layer'+(el.id===studio.selected?' active':'');let span=document.createElement('span');span.textContent=el.type+' · '+(el.text||'object').slice(0,28);span.onclick=()=>{studio.selected=el.id;selection();};div.append(span);for(const [txt,dir] of [['↑',1],['↓',-1]]){let b=document.createElement('button');b.textContent=txt;b.onclick=()=>{let i=studio.items.indexOf(el),j=i+dir;if(j>=0&&j<studio.items.length){[studio.items[i],studio.items[j]]=[studio.items[j],studio.items[i]];selection();render();}};div.append(b)}$('layers').append(div)});render();}
+function selection(){preserveLayerDimensions();syncQrDimensions();const el=studio.items.find(e=>e.id===studio.selected);$('props').style.display=el?'block':'none';if(el){if(['qr','square','circle'].includes(el.type)){const d=dims();el.h=el.w*d.w_px/d.h_px;}$('aspectlock').checked=['qr','square','circle'].includes(el.type)?true:el.aspectLocked!==false;$('aspectlock').disabled=['qr','square','circle'].includes(el.type);$('pribbon').value=ribbonFor(el);$('proptext').value=el.text||'';$('proptext').readOnly=isVialLayer(el);$('textAlignmentControl').hidden=el.type!=='text';$('palign').value=textAlignment(el.align);for(const [id,key] of [['px','x'],['py','y'],['pw','w'],['ph','h'],['psize','size'],['protate','rotate'],['pradius','radius']])$(id).value=el[key]??0;$('pfont').value=el.font||'Arial';$('pbold').checked=!!el.bold;$('psnap').checked=!!el.snap;$('snapCenterX').checked=el.snapCenterX!==false;$('snapCenterY').checked=el.snapCenterY!==false;$('snaptarget').innerHTML='<option value="all">Nearest layer (automatic)</option>';studio.items.filter(x=>x.id!==el.id).forEach(x=>{const option=document.createElement('option');option.value=String(x.id);option.textContent=x.type+' · '+(x.text||'object').slice(0,25);$('snaptarget').append(option)});$('snaptarget').value=el.snapTarget||'all';$('pcolor').value=el.color||'black';$('pfill').value=el.fill||'none';$('pstroke').value=el.strokeStyle||'solid';$('pimageWhite').checked=!!el.lightInk;$('pimageWhite').disabled=el.type!=='image';$('pstroke').disabled=el.type!=='line'&&!outlinedShapes.includes(el.type);$('pstrokeWidth').disabled=$('pstroke').disabled;$('pstrokeWidth').value=strokeWidthMm(el.strokeWidthMm)??'';$('pinvert').checked=!!el.invert;$('protate').value=el.rotate||0;$('pradius').value=el.radius||0;}$('layers').innerHTML='';studio.items.slice().reverse().forEach(el=>{let div=document.createElement('div');div.className='layer'+(el.id===studio.selected?' active':'');let span=document.createElement('span');span.textContent=el.type+' · '+(el.text||'object').slice(0,28);span.onclick=()=>{studio.selected=el.id;selection();};div.append(span);for(const [txt,dir] of [['↑',1],['↓',-1]]){let b=document.createElement('button');b.textContent=txt;b.onclick=()=>{let i=studio.items.indexOf(el),j=i+dir;if(j>=0&&j<studio.items.length){[studio.items[i],studio.items[j]]=[studio.items[j],studio.items[i]];selection();render();}};div.append(b)}$('layers').append(div)});render();}
 $('aspectlock').addEventListener('change',()=>{const el=studio.items.find(x=>x.id===studio.selected);if(el)el.aspectLocked=$('aspectlock').checked;});
 for(const [id,key] of [['snapCenterX','snapCenterX'],['snapCenterY','snapCenterY']])$(id).addEventListener('change',()=>{const el=studio.items.find(x=>x.id===studio.selected);if(el)el[key]=$(id).checked;});
 function textAlignment(value){
@@ -476,9 +489,9 @@ $('elementfile').onchange=async e=>{let f=e.target.files[0];if(!f)return;let dat
  const lightInk=count>0&&sum/count>.65;
  add('image',{src:data,img:im,w,h,x:(100-w)/2,y:(100-h)/2,aspect:im.naturalWidth/im.naturalHeight,lightInk,ribbon:lightInk?'white':'black'});
  if(lightInk)status('Detected white/light artwork. Assigned White ribbon and preserved transparent background. Change ribbon color in layer properties if needed.');};im.src=data;e.target.value='';};
-for(const [id,key] of [['px','x'],['py','y'],['pw','w'],['ph','h'],['psize','size'],['protate','rotate'],['pradius','radius'],['pfont','font'],['pbold','bold'],['proptext','text']])$(id).addEventListener('input',()=>{let el=studio.items.find(e=>e.id===studio.selected);if(!el)return;el[key]=id==='pbold'?$(id).checked:['font','text'].includes(key)?$(id).value:Number($(id).value);if(['qr','square','circle'].includes(el.type)&&['w','h'].includes(key)){const d=dims(),ratio=d.w_px/d.h_px;if(key==='w'){el.h=el.w*ratio;$('ph').value=el.h.toFixed(2)}else{el.w=el.h/ratio;$('pw').value=el.w.toFixed(2)}}if(el.type==='image'&&$('aspectlock').checked&&['w','h'].includes(key)){const ratio=el.aspect||(el.img?el.img.naturalWidth/el.img.naturalHeight:1);const labelW=Number($('width').value)||50,labelH=Number($('height').value)||30;if(key==='w'){el.h=el.w/ratio*labelW/labelH;$('ph').value=el.h.toFixed(2)}else{el.w=el.h*ratio*labelH/labelW;$('pw').value=el.w.toFixed(2)}}if(key==='text'&&el.type==='qr')makeQR(el);render();});
+for(const [id,key] of [['px','x'],['py','y'],['pw','w'],['ph','h'],['psize','size'],['protate','rotate'],['pradius','radius'],['pfont','font'],['pbold','bold'],['proptext','text']])$(id).addEventListener('input',()=>{let el=studio.items.find(e=>e.id===studio.selected);if(!el||(key==='text'&&isVialLayer(el)))return;el[key]=id==='pbold'?$(id).checked:['font','text'].includes(key)?$(id).value:Number($(id).value);if(['qr','square','circle'].includes(el.type)&&['w','h'].includes(key)){const d=dims(),ratio=d.w_px/d.h_px;if(key==='w'){el.h=el.w*ratio;$('ph').value=el.h.toFixed(2)}else{el.w=el.h/ratio;$('pw').value=el.w.toFixed(2)}}if(el.type==='image'&&$('aspectlock').checked&&['w','h'].includes(key)){const ratio=el.aspect||(el.img?el.img.naturalWidth/el.img.naturalHeight:1);const labelW=Number($('width').value)||50,labelH=Number($('height').value)||30;if(key==='w'){el.h=el.w/ratio*labelW/labelH;$('ph').value=el.h.toFixed(2)}else{el.w=el.h*ratio*labelH/labelW;$('pw').value=el.w.toFixed(2)}}if(key==='text'&&el.type==='qr')makeQR(el);render();});
 $('psnap').onchange=()=>{const el=studio.items.find(x=>x.id===studio.selected);if(el)el.snap=$('psnap').checked;};$('snaptarget').onchange=()=>{const el=studio.items.find(x=>x.id===studio.selected);if(el)el.snapTarget=$('snaptarget').value;};
-$('duplicate').onclick=()=>{let el=studio.items.find(e=>e.id===studio.selected);if(el)add(el.type,{...el,id:Date.now()+Math.random(),x:el.x+5,y:el.y+5,snapTarget:'all'})};
+$('duplicate').onclick=()=>{let el=studio.items.find(e=>e.id===studio.selected);if(el){const {vialField,...copy}=el;add(el.type,{...copy,id:Date.now()+Math.random(),x:el.x+5,y:el.y+5,snapTarget:'all'});}};
 $('delete').onclick=()=>{studio.items=studio.items.filter(e=>e.id!==studio.selected);studio.selected=null;selection()};
 $('resetproject').onclick=()=>{if(confirm('Clear all custom layers?')){studio.items=[];studio.selected=null;selection();}};
 
@@ -607,7 +620,57 @@ $('customFontUpload').onchange=async e=>{
  e.target.value='';
 };
 
-$('saveproject').onclick=()=>{let data={version:1,labelPreset:$('labelSizePreset').value,width:$('width').value,height:$('height').value,customFonts:Object.fromEntries(customFonts),items:studio.items.map(({img,qrimg,...rest})=>rest)};if(finished){const bg=document.createElement('canvas');bg.width=finished.width;bg.height=finished.height;bg.getContext('2d').drawImage(finished,0,0);data.backgroundImage=bg.toDataURL('image/png');}let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const name=askExportName('niimbot-editable-label','json');if(!name){URL.revokeObjectURL(a.href);return;}a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
+const vialInputIds=['vialMass','vialVolume','vialTarget'];
+function isVialLayer(layer){
+ return layer.type==='text'&&['concentration','sample'].includes(layer.vialField);
+}
+function vialInputs(){
+ return Object.fromEntries(vialInputIds.map(id=>[id,$(id).value]));
+}
+function restoreVialInputs(values){
+ for(const id of vialInputIds)$(id).value=values?.[id]??'';
+ refreshVialCalc();
+}
+function calculateVial({vialMass,vialVolume,vialTarget}){
+ const mass=Number(vialMass),volume=Number(vialVolume),target=Number(vialTarget);
+ const concentration=mass/volume,sample=target/concentration;
+ const format=value=>String(Number(value.toPrecision(6)));
+ const positive=value=>Number.isFinite(value)&&value>0;
+ return {
+  concentration:positive(mass)&&positive(volume)&&positive(concentration)
+   ? 'Concentration '+format(concentration)+' mg/mL':'',
+  sample:positive(mass)&&positive(volume)&&positive(concentration)&&target<=mass&&positive(sample)
+   ? format(target)+' mg sample = '+format(sample)+' mL':''
+ };
+}
+function refreshVialCalc(){
+ const inputs=vialInputs(),values=calculateVial(inputs);
+ const message=!values.concentration?'Enter a positive vial amount and final volume.':
+  inputs.vialTarget&&!values.sample?'Enter a positive sample amount no greater than the vial amount.':'';
+ $('vialResult').textContent=[values.concentration,values.sample,message].filter(Boolean).join(' · ');
+ $('vialConcentrationLayer').disabled=!values.concentration;
+ $('vialSampleLayer').disabled=!values.sample;
+ let changed=false;
+ for(const layer of studio.items.filter(isVialLayer)){
+  const text=values[layer.vialField]||'';
+  if(layer.text!==text){layer.text=text;changed=true;}
+ }
+ if(changed)selection();
+}
+for(const id of vialInputIds)$(id).addEventListener('input',()=>{
+ if(batch.running)return;
+ if(batch.original)restoreBatch();
+ refreshVialCalc();
+});
+for(const [id,field] of [['vialConcentrationLayer','concentration'],['vialSampleLayer','sample']])$(id).onclick=()=>{
+ if(batch.running)return;
+ if(batch.original)restoreBatch();
+ const text=calculateVial(vialInputs())[field];
+ if(text)add('text',{vialField:field,text,x:8,y:field==='concentration'?55:72,w:84,h:15,align:'center'});
+};
+refreshVialCalc();
+
+$('saveproject').onclick=()=>{let data={version:1,labelPreset:$('labelSizePreset').value,width:$('width').value,height:$('height').value,customFonts:Object.fromEntries(customFonts),vialCalc:vialInputs(),items:studio.items.map(({img,qrimg,...rest})=>rest)};if(finished){const bg=document.createElement('canvas');bg.width=finished.width;bg.height=finished.height;bg.getContext('2d').drawImage(finished,0,0);data.backgroundImage=bg.toDataURL('image/png');}let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const name=askExportName('niimbot-editable-label','json');if(!name){URL.revokeObjectURL(a.href);return;}a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
 $('loadproject').onclick=()=>{const input=$('projectfile');input.value='';input.click();};
 $('projectfile').onchange=async e=>{
  const file=e.target.files?.[0];
@@ -645,6 +708,8 @@ $('projectfile').onchange=async e=>{
    $('width').dispatchEvent(new Event('input',{bubbles:true}));
   }
   studio.items=validItems;
+  restoreVialInputs(data.vialCalc);
+  $('vialCalc').open=studio.items.some(isVialLayer);
   if(typeof data.backgroundImage==='string'&&data.backgroundImage.startsWith('data:image/')){
    const background=new Image();background.src=data.backgroundImage;await background.decode();finished=background;
   }else finished=null;
@@ -679,7 +744,7 @@ function prepareBatch(rowIndex){
  batch.original=studio.items.map(el=>({id:el.id,text:el.text,qrimg:el.qrimg}));batch.original.headline=$('headline').value;batch.original.details=$('details').value;
  const data=Object.fromEntries(batch.headers.map((h,i)=>[h,row[i]??'']));
  const replace=t=>String(t??'').replace(/\{\{\s*([^{}]+?)\s*\}\}/g,(full,key)=>Object.hasOwn(data,key)?data[key]:full);
- for(const el of studio.items)if(el.type==='text'||el.type==='qr')el.text=replace(el.text);
+ for(const el of studio.items)if((el.type==='text'||el.type==='qr')&&!isVialLayer(el))el.text=replace(el.text);
  $('headline').value=replace($('headline').value);$('details').value=replace($('details').value);
  render();return studio.items.filter(el=>el.type==='qr');
 }
@@ -728,7 +793,7 @@ $('batchprint').onclick=async()=>{
   });
   const totalCopies=rowCopies.reduce((a,b)=>a+b,0);
   if(!currentPrinterProfile()?.verified)throw Error('Batch printing is not available in experimental mode.');if(!confirm(`Print ${count} batch rows (${totalCopies} total labels)?`))return;
-  batch.running=true;batch.stop=false;$('batchprint').disabled=true;$('batchcancel').disabled=false;
+  batch.running=true;batch.stop=false;for(const id of vialInputIds)$(id).disabled=true;$('batchprint').disabled=true;$('batchcancel').disabled=false;
   Niimbot.WRITE_MODE=$('mode').value==='auto'?null:$('mode').value;
   let completed=0,printedCopies=0;
   for(let i=0;i<count;i++){
@@ -741,7 +806,7 @@ $('batchprint').onclick=async()=>{
   }
   $('batchprogress').textContent=`${batch.stop?'Stopped':'Completed'}: ${completed}/${count} rows sent (${printedCopies} labels requested).`;
  }catch(err){$('batchprogress').textContent='Batch interrupted: '+err.message+' Some labels may already have printed. Check the printer before retrying.';}
- finally{batch.running=false;$('batchprint').disabled=false;$('batchcancel').disabled=true;restoreBatch();}
+ finally{batch.running=false;for(const id of vialInputIds)$(id).disabled=false;$('batchprint').disabled=false;$('batchcancel').disabled=true;restoreBatch();}
 };
 </script><script>document.getElementById('downloadCsvTemplate').addEventListener('click',()=>{const csv='Product,Strength,LOT,Copies\r\nProduct A,10 mg,LOT-001,1\r\nProduct B,20 mg,LOT-002,2\r\n';const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='niimbot-batch-template.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);});</script><script>
 (function(){
