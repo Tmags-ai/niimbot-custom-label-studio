@@ -13,11 +13,33 @@ main.studio-active>#previewPanel{display:flex;flex-direction:column;height:100%;
  main.studio-active>#previewPanel{height:clamp(300px,88dvh,720px)}
  .studio-active #previewPanel .preview{--preview-height:clamp(90px,35dvh,340px)}
 }
+
+#importRibbonSlots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.import-ribbon-slot{min-width:0;padding:9px;border:1px solid #41516c;border-radius:9px}
+.import-ribbon-slot label{display:flex;gap:7px;align-items:center;margin:0 0 7px;font-weight:700}
+.import-ribbon-slot input{padding:7px}
+.import-ribbon-slot small{margin:5px 0;overflow-wrap:anywhere}
+.import-ribbon-slot button{margin:2px 0;padding:5px 8px;font-size:12px}
+.import-ribbon-swatch{width:12px;height:12px;border:1px solid #aabbd3;border-radius:50%;flex:none}
+@media(max-width:470px){#importRibbonSlots{grid-template-columns:1fr}}
 </style></head><body><header><h1>NIIMBOT Custom Label Studio</h1><div style="color:#9cb0d0;margin-top:6px">Local label designer and direct Bluetooth printing</div>
 <a href="https://buymeacoffee.com/tmags" target="_blank" rel="noopener noreferrer"
 style="display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:10px 16px;background:#ffdd64;color:#242424;border-radius:9px;text-decoration:none;font-weight:750"
 aria-label="Support development with a voluntary donation">☕ Support Development</a>
-<span style="display:inline-block;margin-left:10px;color:#9cb0d0;font-size:12px">Optional donations • The studio is free to use</span> <a href="./guide.html" style="display:inline-block;margin:12px 0 0 10px;color:#e6f2ff;font-weight:700">Studio User Guide</a> <a href="./templates.html" style="display:inline-block;margin:12px 0 0 10px;color:#e6f2ff;font-weight:700">Label Templates</a></header><main><section class="panel"><nav id="studio-tabs" aria-label="Studio sections" role="tablist"><button type="button" role="tab" aria-selected="true" data-open-tab="setup">🔌 Printer & Setup</button><button type="button" role="tab" aria-selected="false" data-open-tab="import">📤 Import Label</button><button type="button" role="tab" aria-selected="false" data-open-tab="studio">🎨 Custom Label</button><button type="button" role="tab" aria-selected="false" data-open-tab="quick">⚡ Quick Template</button><button type="button" role="tab" aria-selected="false" data-open-tab="batch">📊 Batch Printing</button></nav><div id="printer-banner" role="status">Printer: <span id="printer-banner-status">Not connected</span> · Label <span id="printer-banner-size">50 × 30 mm</span> · <label for="labelOrientation" style="display:inline;margin:0">Orientation</label> <select id="labelOrientation" style="display:inline-block;width:auto;margin:0 0 0 6px;padding:6px 28px 6px 8px"><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select></div><div id="shared-label-setup" style="padding:12px;border:1px solid #41516c;border-radius:9px;background:#10243e;margin-bottom:14px" hidden><strong>Label setup</strong><label for="sharedLabelPreset">Label size preset</label><select id="sharedLabelPreset"></select><div id="sharedCustomSize" class="grid" hidden><div><label for="sharedWidth">Width (mm)</label><input id="sharedWidth" type="number" min="20" max="50" step=".5"></div><div><label for="sharedHeight">Height (mm)</label><input id="sharedHeight" type="number" min="8" max="240" step=".5"></div></div><small>Shared label dimensions across every tab. Printer & Setup remains unchanged.</small></div><div class="studio-tab-content" data-tab="setup" ><h2>Printer connection</h2><button id="connect">Connect Bluetooth</button><button id="connectUsb" class="secondary" type="button">Connect USB (M2-H)</button><button id="disconnectUsb" class="secondary" type="button">Disconnect USB</button><div id="usbConnectionIndicator" role="status" class="hint" style="margin-top:8px">USB: Not connected</div><div id="usbStatus" role="status" class="hint" style="white-space:pre-wrap;margin-top:8px">USB: not connected. Connect to print or read printer diagnostics.</div><button id="usbRfid" class="secondary" type="button">Read USB counters (read-only)</button><button id="disconnect" class="secondary">Disconnect</button><div id="device">Not connected</div><div id="printerCompatibility" role="status" class="hint" style="margin-top:10px">Connect a printer to see detected model, resolution, and compatibility status.</div><div style="padding:12px;margin-top:12px;border:1px solid #395675;border-radius:9px"><h3 style="margin:0 0 8px">RFID / Roll diagnostics (read-only)</h3><small>Shows read-only printer-reported RFID data when available. Counter meanings depend on firmware; this tool never changes RFID data.</small><div id="rollDiagnostics" role="status" style="white-space:pre-wrap;margin:10px 0">Printer: not connected\nRFID remaining labels: Counter unavailable\nPrint commands this session: 0</div><div id="autoRfidTracking" role="status" style="white-space:pre-wrap;margin:10px 0">Automatic print tracking: waiting for a print job.</div><label style="display:block;margin:8px 0"><input type="number" id="physicalLabelsUsed" min="0" step="1" value="1" style="width:75px"> Physical labels used per print job (manual estimate)</label><button id="readRfidStatus" class="secondary" type="button">Read RFID status</button><button id="refreshRollDiagnostics" class="secondary" type="button">Refresh diagnostics</button><button id="resetRollDiagnostics" class="secondary" type="button">Reset session count</button><small>Session count tracks successful print commands initiated by this Studio, not physical labels used or RFID deductions. Compare before/after readings only if the printer actually exposes a remaining-label count.</small></div><div style="padding:12px;margin-top:10px;border:1px solid #6a6480;border-radius:9px"><label><input type="checkbox" id="experimentalPrinting" style="width:auto"> Experimental printer test mode</label><small>Opt in to test an unverified NIIMBOT printer. Only one label per job. Batch and multi-ribbon jobs are disabled. Results may be incorrect.</small><div id="experimentalStatus" role="status" class="hint">Experimental mode off</div></div><hr style="border:0;border-top:1px solid #34435b;margin:20px 0"><h2>Label setup</h2><label for="labelSizePreset">Label size preset</label><select id="labelSizePreset"><option value="40,20" selected>40 × 20 mm — Small / vial</option><option value="50,30">50 × 30 mm — Standard</option><option value="30,20">30 × 20 mm — Compact</option><option value="40,30">40 × 30 mm — Product</option><option value="40,40">40 × 40 mm — Square</option><option value="40,40,circle">40 × 40 mm — Circle</option><option value="50,50">50 × 50 mm — Square / round</option><option value="50,70">50 × 70 mm — Long</option><option value="50,80">50 × 80 mm — Detailed</option><option value="50,20">50 × 20 mm</option><option value="custom">Custom size</option></select><div id="customLabelSize" class="grid" hidden><div><label for="width">Width (mm)</label><input id="width" type="number" min="20" max="50" step=".5" value="50"></div><div><label for="height">Height (mm)</label><input id="height" type="number" min="8" max="240" step=".5" value="30"></div></div><small>Choose the dimensions printed on your label roll. Custom size supports M2-H label width 20–50 mm and length 8–240 mm. Printer support for long labels is not yet physically verified.</small><label>Print density (1–5)</label><input id="density" type="range" min="1" max="5" value="3"><label for="usbThreshold">USB print sharpness (black/white threshold)</label><input id="usbThreshold" type="range" min="80" max="220" step="1" value="114"><small>USB only. Lower = thinner/lighter artwork; higher = thicker/darker. Defaults to 114. Unlike print density, this controls which pixels print.</small><div style="padding:12px;border:1px solid #41516c;border-radius:10px;margin:12px 0"><strong>Print alignment calibration</strong><small style="display:block">Print-only adjustments. Current M2-H defaults: 100% artwork size, 0 mm horizontal shift, −0.5 mm vertical shift. Print one test label to confirm alignment.</small><div class="grid"><div><label>Artwork size (%)</label><input id="printScale" type="number" min="80" max="100" step="1" value="100"></div><div><label>Horizontal shift (mm)</label><input id="printShiftX" type="number" min="-5" max="5" step=".1" value="0"></div><div><label>Vertical shift (mm)</label><input id="printShiftY" type="number" min="-5" max="5" step=".25" value="-0.5"></div></div><button id="resetPrintAlignment" type="button" class="secondary">Reset print alignment</button><small>Top edge has an unprinted gap? Print one test with −1.0 mm vertical shift. If the preview reaches the edge but the print does not, the label stock or printer may have a non-printable leading margin.</small></div><label>Bluetooth write mode (Bluetooth only)</label><select id="mode"><option value="paced">Paced (safer)</option><option value="auto">Automatic</option><option value="acked">Acknowledged (slow)</option><option value="fast">Fast (experimental)</option></select><hr style="border:0;border-top:1px solid #34435b;margin:20px 0"></div><div class="studio-tab-content" data-tab="import" hidden><h2>Import a finished label</h2><small>In Canva, use Share → Download → PNG (recommended) or PDF Print. Upload that file here. The imported artwork fills the entire label and is printed as-is, without the headline or details below.</small><label>Upload Canva export / preconfigured label</label><input id="finished" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf"><button id="clearfinished" class="secondary">Remove imported label</button><div style="margin-top:12px;padding:12px;border:1px solid #41516c;border-radius:10px"><strong>Print multiple copies of imported / preconfigured label</strong><label for="finishedCopies">Number of identical copies (1–100)</label><input id="finishedCopies" type="number" min="1" max="100" step="1" value="1"><button id="finishedPrint" type="button">🖨 Print imported label copies</button><div id="finishedPrintStatus" role="status" class="hint">Upload a PNG, JPG, WebP, or PDF above, then connect your M2-H and print multiple copies.</div></div><label style="display:block;margin:12px 0"><input type="checkbox" id="backgroundAspectLock" checked style="width:auto"> Keep aspect ratio when resizing imported label</label><small>Click the imported artwork in the preview, then drag a corner. Uncheck to resize width and height independently.</small><button id="autoFitImported" type="button" class="secondary">Auto-fit imported label to page</button><button id="resetImportedSize" type="button" class="secondary">Reset imported label size &amp; aspect ratio</button><label>Artwork fit</label><select id="fit"><option value="contain">Fit entire design (no cropping)</option><option value="cover">Fill label (crop edges if necessary)</option><option value="stretch">Stretch to label size</option></select><small>PDF import uses the first page only and requires internet access for PDF.js. For sharp results, export from Canva at your label’s exact aspect ratio. Printing is monochrome. You can also add text, QR codes, shapes and images over imported artwork using the Custom Label tab. Export editable project to save the artwork and layers together.</small><hr style="border:0;border-top:1px solid #34435b;margin:20px 0"></div><div class="studio-tab-content" data-tab="studio" hidden><h2>Custom label studio</h2><div id="ribbon-controls" style="margin:14px 0;padding:14px;border:1px solid #5b7595;border-radius:12px">
+<span style="display:inline-block;margin-left:10px;color:#9cb0d0;font-size:12px">Optional donations • The studio is free to use</span> <a href="./guide.html" style="display:inline-block;margin:12px 0 0 10px;color:#e6f2ff;font-weight:700">Studio User Guide</a> <a href="./templates.html" style="display:inline-block;margin:12px 0 0 10px;color:#e6f2ff;font-weight:700">Label Templates</a></header><main><section class="panel"><nav id="studio-tabs" aria-label="Studio sections" role="tablist"><button type="button" role="tab" aria-selected="true" data-open-tab="setup">🔌 Printer & Setup</button><button type="button" role="tab" aria-selected="false" data-open-tab="import">📤 Import Label</button><button type="button" role="tab" aria-selected="false" data-open-tab="studio">🎨 Custom Label</button><button type="button" role="tab" aria-selected="false" data-open-tab="quick">⚡ Quick Template</button><button type="button" role="tab" aria-selected="false" data-open-tab="batch">📊 Batch Printing</button></nav><div id="printer-banner" role="status">Printer: <span id="printer-banner-status">Not connected</span> · Label <span id="printer-banner-size">50 × 30 mm</span> · <label for="labelOrientation" style="display:inline;margin:0">Orientation</label> <select id="labelOrientation" style="display:inline-block;width:auto;margin:0 0 0 6px;padding:6px 28px 6px 8px"><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select></div><div id="shared-label-setup" style="padding:12px;border:1px solid #41516c;border-radius:9px;background:#10243e;margin-bottom:14px" hidden><strong>Label setup</strong><label for="sharedLabelPreset">Label size preset</label><select id="sharedLabelPreset"></select><div id="sharedCustomSize" class="grid" hidden><div><label for="sharedWidth">Width (mm)</label><input id="sharedWidth" type="number" min="20" max="50" step=".5"></div><div><label for="sharedHeight">Height (mm)</label><input id="sharedHeight" type="number" min="8" max="240" step=".5"></div></div><small>Shared label dimensions across every tab. Printer & Setup remains unchanged.</small></div><div class="studio-tab-content" data-tab="setup" ><h2>Printer connection</h2><button id="connect">Connect Bluetooth</button><button id="connectUsb" class="secondary" type="button">Connect USB (M2-H)</button><button id="disconnectUsb" class="secondary" type="button">Disconnect USB</button><div id="usbConnectionIndicator" role="status" class="hint" style="margin-top:8px">USB: Not connected</div><div id="usbStatus" role="status" class="hint" style="white-space:pre-wrap;margin-top:8px">USB: not connected. Connect to print or read printer diagnostics.</div><button id="usbRfid" class="secondary" type="button">Read USB counters (read-only)</button><button id="disconnect" class="secondary">Disconnect</button><div id="device">Not connected</div><div id="printerCompatibility" role="status" class="hint" style="margin-top:10px">Connect a printer to see detected model, resolution, and compatibility status.</div><div style="padding:12px;margin-top:12px;border:1px solid #395675;border-radius:9px"><h3 style="margin:0 0 8px">RFID / Roll diagnostics (read-only)</h3><small>Shows read-only printer-reported RFID data when available. Counter meanings depend on firmware; this tool never changes RFID data.</small><div id="rollDiagnostics" role="status" style="white-space:pre-wrap;margin:10px 0">Printer: not connected\nRFID remaining labels: Counter unavailable\nPrint commands this session: 0</div><div id="autoRfidTracking" role="status" style="white-space:pre-wrap;margin:10px 0">Automatic print tracking: waiting for a print job.</div><label style="display:block;margin:8px 0"><input type="number" id="physicalLabelsUsed" min="0" step="1" value="1" style="width:75px"> Physical labels used per print job (manual estimate)</label><button id="readRfidStatus" class="secondary" type="button">Read RFID status</button><button id="refreshRollDiagnostics" class="secondary" type="button">Refresh diagnostics</button><button id="resetRollDiagnostics" class="secondary" type="button">Reset session count</button><small>Session count tracks successful print commands initiated by this Studio, not physical labels used or RFID deductions. Compare before/after readings only if the printer actually exposes a remaining-label count.</small></div><div style="padding:12px;margin-top:10px;border:1px solid #6a6480;border-radius:9px"><label><input type="checkbox" id="experimentalPrinting" style="width:auto"> Experimental printer test mode</label><small>Opt in to test an unverified NIIMBOT printer. Only one label per job. Batch and multi-ribbon jobs are disabled. Results may be incorrect.</small><div id="experimentalStatus" role="status" class="hint">Experimental mode off</div></div><hr style="border:0;border-top:1px solid #34435b;margin:20px 0"><h2>Label setup</h2><label for="labelSizePreset">Label size preset</label><select id="labelSizePreset"><option value="40,20" selected>40 × 20 mm — Small / vial</option><option value="50,30">50 × 30 mm — Standard</option><option value="30,20">30 × 20 mm — Compact</option><option value="40,30">40 × 30 mm — Product</option><option value="40,40">40 × 40 mm — Square</option><option value="40,40,circle">40 × 40 mm — Circle</option><option value="50,50">50 × 50 mm — Square / round</option><option value="50,70">50 × 70 mm — Long</option><option value="50,80">50 × 80 mm — Detailed</option><option value="50,20">50 × 20 mm</option><option value="custom">Custom size</option></select><div id="customLabelSize" class="grid" hidden><div><label for="width">Width (mm)</label><input id="width" type="number" min="20" max="50" step=".5" value="50"></div><div><label for="height">Height (mm)</label><input id="height" type="number" min="8" max="240" step=".5" value="30"></div></div><small>Choose the dimensions printed on your label roll. Custom size supports M2-H label width 20–50 mm and length 8–240 mm. Printer support for long labels is not yet physically verified.</small><label>Print density (1–5)</label><input id="density" type="range" min="1" max="5" value="3"><label for="usbThreshold">USB print sharpness (black/white threshold)</label><input id="usbThreshold" type="range" min="80" max="220" step="1" value="114"><small>USB only. Lower = thinner/lighter artwork; higher = thicker/darker. Defaults to 114. Unlike print density, this controls which pixels print.</small><div style="padding:12px;border:1px solid #41516c;border-radius:10px;margin:12px 0"><strong>Print alignment calibration</strong><small style="display:block">Print-only adjustments. Current M2-H defaults: 100% artwork size, 0 mm horizontal shift, −0.5 mm vertical shift. Print one test label to confirm alignment.</small><div class="grid"><div><label>Artwork size (%)</label><input id="printScale" type="number" min="80" max="100" step="1" value="100"></div><div><label>Horizontal shift (mm)</label><input id="printShiftX" type="number" min="-5" max="5" step=".1" value="0"></div><div><label>Vertical shift (mm)</label><input id="printShiftY" type="number" min="-5" max="5" step=".25" value="-0.5"></div></div><button id="resetPrintAlignment" type="button" class="secondary">Reset print alignment</button><small>Top edge has an unprinted gap? Print one test with −1.0 mm vertical shift. If the preview reaches the edge but the print does not, the label stock or printer may have a non-printable leading margin.</small></div><label>Bluetooth write mode (Bluetooth only)</label><select id="mode"><option value="paced">Paced (safer)</option><option value="auto">Automatic</option><option value="acked">Acknowledged (slow)</option><option value="fast">Fast (experimental)</option></select><hr style="border:0;border-top:1px solid #34435b;margin:20px 0"></div><div class="studio-tab-content" data-tab="import" hidden><h2>Import a finished label</h2>
+<label for="importPrintMode">Print mode</label><select id="importPrintMode"><option value="mono">Black &amp; White</option><option value="ribbon">Multi-Ribbon</option></select>
+<div id="importMonoOptions"><small>Upload a PNG, JPG, WebP, or the first page of a PDF.</small><label>Upload Canva export / preconfigured label</label><input id="finished" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf"><button id="clearfinished" class="secondary">Remove imported label</button><label style="display:block;margin:12px 0"><input type="checkbox" id="backgroundAspectLock" checked style="width:auto"> Keep aspect ratio when resizing imported label</label><small>Click the imported artwork in the preview, then drag a corner. Uncheck to resize width and height independently.</small><button id="autoFitImported" type="button" class="secondary">Auto-fit imported label to page</button><button id="resetImportedSize" type="button" class="secondary">Reset imported label size &amp; aspect ratio</button><small>Add text, QR codes, shapes, or images over this artwork in Custom Label. Export an editable project there to save the artwork and layers together.</small></div>
+<section id="importRibbonOptions" hidden><h3>Import Layers</h3>
+<p class="hint">Upload one file per ribbon color. Export each pass on the same full-size canvas, with dark artwork where that ribbon should print and a white or transparent background. Leave unused colors empty.</p>
+<div id="importRibbonSlots"></div>
+<label for="importRibbonPreview">Preview</label><select id="importRibbonPreview"><option value="all">All colors (combined)</option></select>
+<label for="importRibbonPass">Ribbon installed / print color</label><select id="importRibbonPass"></select>
+<small>Use the same copies and the same physical labels for every pass. Rewind and realign the labels before changing ribbons.</small>
+</section>
+<label>Artwork fit</label><select id="fit"><option value="contain">Fit entire design (no cropping)</option><option value="cover">Fill label (crop edges if necessary)</option><option value="stretch">Stretch to label size</option></select>
+<small>PDF import uses the first page and requires internet access for PDF.js.</small>
+<label id="importCopiesLabel" for="finishedCopies">Number of identical copies (1–100)</label><input id="finishedCopies" type="number" min="1" max="100" step="1" value="1">
+<button id="finishedPrint" type="button">Print imported label copies</button><div id="finishedPrintStatus" role="status" class="hint"></div><hr style="border:0;border-top:1px solid #34435b;margin:20px 0"></div><div class="studio-tab-content" data-tab="studio" hidden><h2>Custom label studio</h2><div id="ribbon-controls" style="margin:14px 0;padding:14px;border:1px solid #5b7595;border-radius:12px">
 <label for="customPrintMode">Print mode</label><select id="customPrintMode"><option value="mono">Black &amp; White</option><option value="ribbon">Multi-Ribbon</option></select>
 <strong id="customPrintHeading">Print this Custom Label Studio design</strong>
 <div id="monoPrintHelp"><small>Print all layers in one pass with a black ribbon on white labels. White objects knock out black backgrounds.</small></div>
@@ -299,26 +321,88 @@ $('studioPrint').onclick=async()=>{
  finally{studioPrinting=false;button.disabled=false;toggle.disabled=false;}
 };
 let finishedPrinting=false;
+const importRibbonLayers=new Map();
+const importRibbonLoads=new Set();
+let importTabActive=false;
+function isRibbonImport(){return $('importPrintMode').value==='ribbon';}
+function syncImportMode(){
+ const ribbon=isRibbonImport();
+ $('importMonoOptions').hidden=ribbon;
+ $('importRibbonOptions').hidden=!ribbon;
+ $('finishedPrint').textContent=ribbon?'Print selected ribbon color':'Print imported label copies';
+ $('importCopiesLabel').textContent=ribbon?'Copies per color pass (1–100)':'Number of identical copies (1–100)';
+ $('finishedPrintStatus').textContent='';
+ syncImportRibbonChoices();
+ backgroundSelected=false;
+ render();
+}
+function drawImportedRibbonArtwork(canvas,pass=null,previewFilter='all'){
+ const size=dims();
+ if(canvas.width!==size.w_px)canvas.width=size.w_px;
+ if(canvas.height!==size.h_px)canvas.height=size.h_px;
+ const g=canvas.getContext('2d'),fit=$('fit').value;
+ g.fillStyle=!pass&&(previewFilter==='all'||previewFilter==='white')&&importRibbonLayers.has('white')?'#e5e5e5':'#fff';
+ g.fillRect(0,0,canvas.width,canvas.height);
+ for(const color of Object.keys(ribbonColors)){
+  if(pass?pass!==color:previewFilter!=='all'&&previewFilter!==color)continue;
+  const layer=importRibbonLayers.get(color);if(!layer)continue;
+  const im=layer.image;
+  const scale=(fit==='cover'?Math.max:Math.min)(canvas.width/im.width,canvas.height/im.height);
+  const w=fit==='stretch'?canvas.width:im.width*scale,h=fit==='stretch'?canvas.height:im.height*scale;
+  const mask=ribbonImage(im,w,h,pass?'black':color);
+  g.drawImage(mask,(canvas.width-w)/2,(canvas.height-h)/2,w,h);
+ }
+}
 $('finishedPrint').onclick=async()=>{
  if(finishedPrinting)return;
  const button=$('finishedPrint'),info=$('finishedPrintStatus');
+ const ribbon=isRibbonImport(),color=$('importRibbonPass').value;
  try{
   const copies=readCopies($('finishedCopies').value);
-  if(!finished)throw Error('Upload a preconfigured label first.');
+  if(ribbon&&importRibbonLoads.size)throw Error('Wait for the artwork to finish loading.');
+  if(ribbon&&!importRibbonLayers.has(color))throw Error('Upload artwork for the '+(color||'selected')+' ribbon first.');
+  if(!ribbon&&!finished)throw Error('Upload a preconfigured label first.');
   if(studioPrinting||batch.running)throw Error('Wait for the current print job to finish.');
-  engine();
-  printerReady();
-  const size=dims();render();const data=c.toDataURL('image/png');
-  if(!confirm('Print '+copies+' identical copies of the imported label?'))return;
-  finishedPrinting=true;button.disabled=true;
+  engine();const profile=printerReady();
+  if(ribbon&&!profile.verified)throw Error('Multi-ribbon printing is not available in experimental mode.');
+  const confirmation=ribbon
+   ? 'Confirm the '+color+' ribbon is installed. Print '+copies+' copies of this pass?'
+   : 'Print '+copies+' identical copies of the imported label?';
+  if(!confirm(confirmation))return;
+  const size=dims();let data;
+  if(ribbon){
+   const raster=document.createElement('canvas');
+   drawImportedRibbonArtwork(raster,color);data=raster.toDataURL('image/png');
+  }else{render();data=c.toDataURL('image/png');}
+  finishedPrinting=true;button.disabled=true;$('importPrintMode').disabled=true;
   Niimbot.WRITE_MODE=$('mode').value==='auto'?null:$('mode').value;
   info.textContent='Sending '+copies+' copies…';
   await printWithSafety(data,{model,size,copies,density:Number($('density').value),onProgress:message=>{info.textContent=message;status(message)}});
-  info.textContent='Print command completed for '+copies+' copies. Check your printer output.';
- }catch(e){info.textContent='Print error: '+e.message+' Some copies may already have printed.';}
- finally{finishedPrinting=false;button.disabled=false;}
+  info.textContent=ribbon?'Pass sent. Check the print, then rewind and realign the same labels before changing ribbons.':'Print command completed for '+copies+' copies. Check your printer output.';
+ }catch(e){info.textContent='Print error: '+e.message+(finishedPrinting?' Some copies may already have printed.':'');}
+ finally{finishedPrinting=false;syncImportRibbonChoices();$('importPrintMode').disabled=false;}
 };
-$('download').onclick=()=>{render();let a=document.createElement('a');a.href=c.toDataURL('image/png');const name=askExportName('niimbot-m2-label','png');if(!name)return;a.download=name;a.click()};$('upload').onchange=e=>{let f=e.target.files[0];if(!f){logo=null;render();return}let u=URL.createObjectURL(f),im=new Image();im.onload=()=>{logo=im;URL.revokeObjectURL(u);render()};im.src=u};$('finished').addEventListener('change',async e=>{let file=e.target.files?.[0];if(!file)return;try{status('Loading imported label…');let im;if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){if(!window.pdfjsLib)throw Error('PDF renderer unavailable. Check internet connection or export PNG from Canva.');const bytes=new Uint8Array(await file.arrayBuffer());const doc=await pdfjsLib.getDocument({data:bytes}).promise;const page=await doc.getPage(1);const view=page.getViewport({scale:3});const temp=document.createElement('canvas');temp.width=Math.ceil(view.width);temp.height=Math.ceil(view.height);await page.render({canvasContext:temp.getContext('2d'),viewport:view}).promise;im=temp;}else{im=await createImageBitmap(file);}finished=im;autoFitImported();status('Imported '+file.name+' and auto-fitted to the label page. Check physical dimensions before printing.');}catch(err){status('Import failed: '+err.message);}});$('clearfinished').onclick=()=>{finished=null;$('finished').value='';render();status('Imported artwork removed. Designer is active.');};$('fit').addEventListener('change',render);['width','height','headline','details','quicktemplate','separator'].forEach(id=>$(id).addEventListener('input',render));$('labelOrientation').addEventListener('change',()=>{try{localStorage.setItem('niimbot-label-orientation',$('labelOrientation').value)}catch(e){}render();});try{$('labelOrientation').value=localStorage.getItem('niimbot-label-orientation')||'landscape'}catch(e){}render();
+$('download').onclick=()=>{render();let a=document.createElement('a');a.href=c.toDataURL('image/png');const name=askExportName('niimbot-m2-label','png');if(!name)return;a.download=name;a.click()};$('upload').onchange=e=>{let f=e.target.files[0];if(!f){logo=null;render();return}let u=URL.createObjectURL(f),im=new Image();im.onload=()=>{logo=im;URL.revokeObjectURL(u);render()};im.src=u};async function decodeImportedArtwork(file){
+ if(file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf'))return createImageBitmap(file);
+ if(!window.pdfjsLib)throw Error('PDF renderer unavailable. Check internet connection or export PNG from Canva.');
+ const doc=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+ try{
+  const page=await doc.getPage(1),view=page.getViewport({scale:3}),temp=document.createElement('canvas');
+  temp.width=Math.ceil(view.width);temp.height=Math.ceil(view.height);
+  await page.render({canvasContext:temp.getContext('2d'),viewport:view}).promise;
+  return temp;
+ }finally{await doc.destroy();}
+}
+$('finished').addEventListener('change',async e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ try{
+  status('Loading imported label…');
+  finished=await decodeImportedArtwork(file);
+  autoFitImported();
+  $('finishedPrintStatus').textContent='Imported '+file.name+'.';
+ }catch(err){$('finishedPrintStatus').textContent='Import failed: '+err.message;}
+});
+$('clearfinished').onclick=()=>{finished=null;$('finished').value='';render();status('Imported artwork removed. Designer is active.');};$('fit').addEventListener('change',()=>render());['width','height','headline','details','quicktemplate','separator'].forEach(id=>$(id).addEventListener('input',render));$('labelOrientation').addEventListener('change',()=>{try{localStorage.setItem('niimbot-label-orientation',$('labelOrientation').value)}catch(e){}render();});try{$('labelOrientation').value=localStorage.getItem('niimbot-label-orientation')||'landscape'}catch(e){}render();
 
 function askExportName(defaultBase,ext){
  const raw=prompt('Save as — enter a file name:',defaultBase);
@@ -402,6 +486,57 @@ const qrScript=document.createElement('script');qrScript.src='https://cdnjs.clou
 const ribbonColors={black:'#151515',white:'#ffffff',gold:'#b28b21',red:'#df2733',blue:'#2167dc',green:'#248348'};
 let ribbonRenderPass=null;
 let monoPrintMode=false;
+function syncImportRibbonChoices(){
+ const pass=$('importRibbonPass'),preview=$('importRibbonPreview');
+ const loaded=Object.keys(ribbonColors).filter(color=>importRibbonLayers.has(color));
+ for(const select of [pass,preview])for(const option of select.options)
+  option.disabled=option.value!=='all'&&!loaded.includes(option.value);
+ if(!loaded.includes(pass.value))pass.value=loaded[0]||'';
+ if(preview.value!=='all'&&!loaded.includes(preview.value))preview.value='all';
+ pass.disabled=!loaded.length;
+ $('finishedPrint').disabled=finishedPrinting||(isRibbonImport()&&!loaded.length);
+}
+function setupImportRibbonSlots(){
+ const slots=$('importRibbonSlots'),preview=$('importRibbonPreview'),pass=$('importRibbonPass');
+ for(const color of Object.keys(ribbonColors)){
+  const name=color[0].toUpperCase()+color.slice(1),row=document.createElement('div');
+  const label=document.createElement('label'),input=document.createElement('input'),fileStatus=document.createElement('small'),remove=document.createElement('button');
+  input.type='file';input.id='importRibbon-'+color;input.accept=$('finished').accept;
+  row.className='import-ribbon-slot';
+  const swatch=document.createElement('span');swatch.className='import-ribbon-swatch';swatch.style.backgroundColor=ribbonColors[color];
+  swatch.setAttribute('aria-hidden','true');
+  label.htmlFor=input.id;label.append(swatch,name+' ribbon');
+  fileStatus.textContent='No artwork loaded.';fileStatus.setAttribute('role','status');
+  remove.type='button';remove.className='secondary';remove.textContent='Remove '+name.toLowerCase()+' artwork';remove.disabled=true;
+  input.onchange=async()=>{
+   const file=input.files?.[0];if(!file)return;
+   input.disabled=true;remove.disabled=true;importRibbonLoads.add(color);
+   fileStatus.textContent='Loading '+file.name+'…';
+   try{
+    const image=await decodeImportedArtwork(file);
+    importRibbonLayers.get(color)?.image.close?.();
+    importRibbonLayers.set(color,{image,name:file.name});
+    fileStatus.textContent=file.name;
+    syncImportRibbonChoices();render();
+   }catch(e){
+    const current=importRibbonLayers.get(color);
+    fileStatus.textContent='Import failed: '+e.message+(current?' Keeping '+current.name+'.':'');
+   }finally{
+    input.value='';input.disabled=false;importRibbonLoads.delete(color);remove.disabled=!importRibbonLayers.has(color);
+   }
+  };
+  remove.onclick=()=>{
+   importRibbonLayers.get(color)?.image.close?.();importRibbonLayers.delete(color);
+   fileStatus.textContent='No artwork loaded.';remove.disabled=true;syncImportRibbonChoices();render();
+  };
+  row.append(label,input,fileStatus,remove);slots.append(row);
+  preview.add(new Option(name+' only',color));pass.add(new Option(name,color));
+ }
+ $('importPrintMode').addEventListener('change',syncImportMode);
+ preview.addEventListener('change',()=>render());
+ syncImportRibbonChoices();
+}
+setupImportRibbonSlots();
 function ribbonFor(el){return Object.hasOwn(ribbonColors,el.ribbon)?el.ribbon:'black';}
 function ribbonImage(img,w,h,color,lightInk=false){const t=document.createElement('canvas');t.width=Math.max(1,Math.round(w));t.height=Math.max(1,Math.round(h));const g=t.getContext('2d');g.drawImage(img,0,0,t.width,t.height);const pixels=g.getImageData(0,0,t.width,t.height);const hex=ribbonColors[color]||'#151515',rgb=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));for(let j=0;j<pixels.data.length;j+=4){const d=pixels.data;const luminance=(d[j]*.2126+d[j+1]*.7152+d[j+2]*.0722)/255;const darkness=lightInk?luminance:1-luminance;d[j]=rgb[0];d[j+1]=rgb[1];d[j+2]=rgb[2];d[j+3]=Math.round(d[j+3]*darkness);}g.putImageData(pixels,0,0);return t;}
 const oldRender=render;
@@ -425,6 +560,10 @@ function finishLabelPreview(){
  requestAnimationFrame(updateResizeOverlay);
 }
 render=function(){
+ if(importTabActive&&isRibbonImport()){
+  drawImportedRibbonArtwork(c,null,$('importRibbonPreview').value);
+  finishLabelPreview();return;
+ }
  preserveLayerDimensions();
  syncQrDimensions();
  backgroundRender();
@@ -634,7 +773,7 @@ rotateHandle.style.cssText='position:absolute;right:-27px;top:-27px;width:16px;h
 rotateHandle.innerHTML='<span style="position:absolute;left:3px;top:-1px;color:#1685f5;font-size:12px">↻</span>';
 resizeOverlay.appendChild(rotateHandle);
 let backgroundBounds=null,backgroundSelected=false;
-function activeBounds(){return backgroundSelected&&finished?(backgroundBounds||{x:0,y:0,w:100,h:100}):studio.items.find(el=>el.id===studio.selected);}
+function activeBounds(){if(importTabActive&&isRibbonImport())return null;return backgroundSelected&&finished?(backgroundBounds||{x:0,y:0,w:100,h:100}):studio.items.find(el=>el.id===studio.selected);}
 function updateResizeOverlay(){
  previewParent.style.setProperty('--preview-aspect',c.width/Math.max(1,c.height));
  const b=activeBounds();if(!b){resizeOverlay.style.display='none';return;}
@@ -645,6 +784,7 @@ function updateResizeOverlay(){
 }
 function point(e){let r=c.getBoundingClientRect();return {x:(e.clientX-r.left)/r.width*100,y:(e.clientY-r.top)/r.height*100};}
 c.addEventListener('pointerdown',e=>{
+ if(importTabActive&&isRibbonImport())return;
  const p=point(e);const current=activeBounds();
  const threshold=1.9;
  if(current&&!backgroundSelected){
@@ -997,6 +1137,7 @@ $('batchprint').onclick=async()=>{
  if(batch.running)return;
  try{
   engine();printerReady();if(!batch.rows.length)throw Error('Upload a CSV first.');
+  if(finishedPrinting||studioPrinting)throw Error('Wait for the current print job to finish.');
   const count=Math.min(batch.rows.length,Math.max(1,Math.floor(Number($('batchlimit').value)||batch.rows.length)));
   const defaultCopies=readCopies($('copies').value);
   const copyColumn=batch.headers.findIndex(h=>h.toLowerCase()==='copies');
@@ -1071,6 +1212,9 @@ $('batchprint').onclick=async()=>{
  syncShared();
  const buttons=[...document.querySelectorAll('[data-open-tab]')],panels=[...document.querySelectorAll('.studio-tab-content')];
  function openTab(id){
+  const previewModeChanged=importTabActive!==(id==='import');
+  importTabActive=id==='import';
+  if(previewModeChanged&&isRibbonImport())render();
   shared.hidden=id==='setup';syncShared();
   $('layerEditor').hidden=id!=='studio';
   $('layerHistory').hidden=id!=='studio';
