@@ -1,6 +1,6 @@
 # NIIMBOT Custom Label Studio
 
-A free, independent, browser-based label designer for the **NIIMBOT M2-H** with Web Bluetooth printing, Canva-export imports, drag-and-drop layers, QR codes, shapes, and multiple-copy / CSV batch printing.
+A free, independent, browser-based label designer for the **NIIMBOT M2-H** featuring Bluetooth/USB workflows, a zoomable drag-and-drop editor, imported artwork, QR codes, shapes, Vial Calc (including an optional four-stage Protocol builder), and single-label or CSV batch printing.
 
 [☕ Support Development](https://buymeacoffee.com/tmags) — voluntary donations; no features are locked behind a donation.
 
@@ -10,7 +10,16 @@ A free, independent, browser-based label designer for the **NIIMBOT M2-H** with 
 - Import exported Canva PNG/JPG/WebP/PDF artwork; import/export editable JSON projects
 - Export PNG labels with custom filenames
 - Print multiple copies of a custom design or print variable-data batches from CSV
-- Live label preview and independently scrolling editor controls
+- Live label preview, zoom, undo/redo and an easier-to-use layer editor
+- **Vial Calc:** concentration (mg/mL), optional U-100 conversions and linked text layers
+- **Vial Calc → Enable Protocol:** enter up to four stages (amount in mg and duration in weeks), preview a formatted schedule, optionally show per-stage U-100 equivalents, and insert a linked editable **Protocol** text layer; stages update the layer automatically
+- See the [online Studio User Guide](guide.html#vial-calc) for the Protocol walkthrough
+
+## Vial Calc protocol feature
+
+Open **Custom Label → Vial Calc**, then check **Enable Protocol**. Enter a positive amount in mg and a duration in weeks for each of up to four stages; unused stages can be left blank. Optionally enter **Vial amount (mg)** and **Final vial volume (mL)** to display a U-100 conversion for stages where it can be calculated. The Studio flags values outside the vial amount or above 100 U-100 units and omits those invalid conversions. Click **Add protocol layer** to place the schedule on the label, then move and style it like any text layer. The schedule is linked to the calculator and updates when stage entries change. Export the editable JSON project to save the inputs and linked layer.
+
+**For informational label formatting only.** This feature does not prescribe, validate, or recommend a treatment or dosing schedule. Verify any figures independently before use.
 
 ## Use online with GitHub Pages
 
