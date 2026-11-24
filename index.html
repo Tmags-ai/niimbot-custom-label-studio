@@ -38,6 +38,8 @@ aria-label="Support development with a voluntary donation">☕ Support Developme
 <div><label for="vialTarget">Target amount (mg, optional)</label><input id="vialTarget" type="number" min="0" step="any"></div>
 </div>
 <div id="vialTarget2Control" hidden><label for="vialTarget2">Second target amount (mg)</label><input id="vialTarget2" type="number" min="0" step="any"></div>
+<div id="vialTarget3Control" hidden><label for="vialTarget3">Third target amount (mg)</label><input id="vialTarget3" type="number" min="0" step="any"></div>
+<div id="vialTarget4Control" hidden><label for="vialTarget4">Fourth target amount (mg)</label><input id="vialTarget4" type="number" min="0" step="any"></div>
 <p id="vialResult" role="status" class="hint"></p>
 <button id="vialConcentrationLayer" type="button" class="secondary" disabled>Add concentration layer</button>
 <button id="vialSampleLayer" type="button" class="secondary" disabled>Add U-100 conversion layer</button>
@@ -735,9 +737,10 @@ $('customFontUpload').onchange=async e=>{
 };
 
 const vialProtocolRows=[1,2,3,4].map(row=>['vialProtocolMg'+row,'vialProtocolWeeks'+row]);
-const vialInputIds=['vialMass','vialVolume','vialTarget','vialTarget2',...vialProtocolRows.flat()];
+const vialExtraTargets=[[2,'Second'],[3,'Third'],[4,'Fourth']];
+const vialInputIds=['vialMass','vialVolume','vialTarget',...vialExtraTargets.map(([i])=>'vialTarget'+i),...vialProtocolRows.flat()];
 const vialControls=[...vialInputIds,'vialProtocolEnabled'];
-const vialLayerTypes=[['concentration','Concentration'],['sample','U-100 conversion'],['sample2','Second U-100 conversion'],['vialSummary','Vial amount and volume'],['vialAmount','Vial amount'],['vialConversionWithVolume','Conversion and vial volume'],['protocol','Protocol']];
+const vialLayerTypes=[['concentration','Concentration'],['sample','U-100 conversion'],...vialExtraTargets.map(([i,name])=>['sample'+i,name+' U-100 conversion']),['vialVolumeText','Vial volume'],['vialSummary','Vial amount and volume'],['vialAmount','Vial amount'],['vialConversionWithVolume','Conversion and vial volume'],['protocol','Protocol']];
 function isVialLayer(layer){
  return layer.type==='text'&&vialLayerTypes.some(([field])=>field===layer.vialField);
 }
@@ -789,18 +792,32 @@ function calculateVialProtocol(inputs,concentration){
 function vialLayerValues(inputs){
  const vial=calculateVial(inputs);
  const protocol=calculateVialProtocol(inputs,vial.concentration);
- const second=calculateVial({...inputs,vialTarget:inputs.vialTarget2});
+ const extra={};
+ for(const [i] of vialExtraTargets){
+  const target=inputs['vialTarget'+i],conversion=calculateVial({...inputs,vialTarget:target});
+  extra['sample'+i]=conversion.sample;
+  extra['targetMessage'+i]=target&&vial.concentration&&!conversion.sample
+   ? conversion.capacityMessage||'Enter a positive amount no greater than the vial amount.':'';
+ }
+ const volume=Number(inputs.vialVolume);
+ const vialVolumeText=Number.isFinite(volume)&&volume>0?volume+'mL':'';
  const vialSummary=vial.concentration?Number(inputs.vialMass)+'mg / '+Number(inputs.vialVolume)+'mL':'';
  const mass=Number(inputs.vialMass);
  const vialAmount=Number.isFinite(mass)&&mass>0?mass+' MG':'';
  const vialConversionWithVolume=vial.sample?vial.sample.replace(/^(.*) mg = (.*) units$/,'$2 Units = $1mg')+' - '+Number(inputs.vialVolume)+'ml bac':'';
- return {...vial,vialAmount,vialConversionWithVolume,sample2:second.sample,secondCapacityMessage:second.capacityMessage,vialSummary,protocol:protocol.text,protocolMessage:protocol.message};
+ return {...vial,vialAmount,vialConversionWithVolume,...extra,vialVolumeText,vialSummary,protocol:protocol.text,protocolMessage:protocol.message};
 }
 function formatVialLayer(layer,text){
  if(!text)return '';
  if(layer.vialStyle==='compact-dash')return text.replace(' mg = ','mg - ').replace(' units','u');
  if(layer.vialStyle==='compact-equals')return text.replace(' mg','mg').replace(' units','units');
  if(layer.vialStyle==='concentration-colon')return text.replace('Concentration ','Concentration:  ').replace(' mg/mL','mg/mL');
+ if(layer.vialStyle==='slash-summary')return text.replace(' / ','/');
+ if(layer.vialStyle==='bac-volume')return text+' BAC';
+ if(layer.vialStyle==='multidose-volume')return text+' Multiple Dose Vial';
+ if(layer.vialStyle==='multidose-volume-wrapped')return text+' Multiple\nDose Vial';
+ if(layer.vialStyle==='compact-row')return text.replace(' mg','mg').replace(' units','u');
+ if(layer.vialStyle==='reverse-row')return text.replace(/^(.*) mg = (.*) units$/,'$2units = $1mg');
  if(layer.vialStyle==='compact-amount')return text.replace(' MG','MG');
  if(layer.vialStyle==='pen-summary')return text.replace('mL','ml')+' Pen';
  return text;
@@ -811,9 +828,11 @@ function refreshVialCalc(){
  $('vialProtocolResult').textContent=[values.protocol,values.protocolMessage].filter(Boolean).join('\n');
  const message=!values.concentration?'Enter a positive vial amount and final volume.':
   values.capacityMessage||(inputs.vialTarget&&!values.sample?'Enter a positive target amount no greater than the vial amount.':'');
- const secondMessage=inputs.vialTarget2&&values.concentration&&!values.sample2
-  ? 'Second target: '+(values.secondCapacityMessage||'Enter a positive amount no greater than the vial amount.'):'';
- $('vialResult').textContent=[values.concentration,values.sample&&values.sample+' (U-100)',values.sample2&&values.sample2+' (U-100)',message,secondMessage].filter(Boolean).join(' · ');
+ const conversions=[values.sample,...vialExtraTargets.map(([i])=>values['sample'+i])]
+  .filter(Boolean).map(value=>value+' (U-100)');
+ const extraMessages=vialExtraTargets.flatMap(([i,name])=>values['targetMessage'+i]
+  ? [name+' target: '+values['targetMessage'+i]]:[]);
+ $('vialResult').textContent=[values.concentration,...conversions,message,...extraMessages].filter(Boolean).join(' · ');
  updateVialLayerLinks();
  let changed=false;
  for(const layer of studio.items.filter(isVialLayer)){
@@ -834,7 +853,7 @@ function updateVialLayerLinks(){
  const added=field=>studio.items.some(layer=>isVialLayer(layer)&&layer.vialField===field);
  $('vialConcentrationLayer').disabled=!values.concentration||added('concentration');
  $('vialSampleLayer').disabled=!values.sample||added('sample');
- $('vialTarget2Control').hidden=!added('sample2');
+ for(const [i] of vialExtraTargets)$('vialTarget'+i+'Control').hidden=!added('sample'+i);
  $('vialBothLayers').disabled=!values.concentration||!values.sample||(added('concentration')&&added('sample'));
  $('vialProtocolLayer').disabled=!values.protocol||added('protocol');
  for(const [field,label] of vialLayerTypes){
