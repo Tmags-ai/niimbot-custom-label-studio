@@ -41,6 +41,16 @@ aria-label="Support development with a voluntary donation">☕ Support Developme
 <button id="vialConcentrationLayer" type="button" class="secondary" disabled>Add concentration layer</button>
 <button id="vialSampleLayer" type="button" class="secondary" disabled>Add U-100 conversion layer</button>
 <button id="vialBothLayers" type="button" disabled>Add both to label</button>
+<label><input id="vialProtocolEnabled" type="checkbox" style="width:auto"> Enable Protocol</label>
+<div id="vialProtocolOptions" hidden>
+<small>Enter up to four stages in order. Leave unused rows blank.</small>
+<div class="grid"><div><label for="vialProtocolMg1">Stage 1 amount (mg)</label><input id="vialProtocolMg1" type="number" min="0" step="any"></div><div><label for="vialProtocolWeeks1">Stage 1 duration (weeks)</label><input id="vialProtocolWeeks1" type="number" min="0" step="any"></div></div>
+<div class="grid"><div><label for="vialProtocolMg2">Stage 2 amount (mg)</label><input id="vialProtocolMg2" type="number" min="0" step="any"></div><div><label for="vialProtocolWeeks2">Stage 2 duration (weeks)</label><input id="vialProtocolWeeks2" type="number" min="0" step="any"></div></div>
+<div class="grid"><div><label for="vialProtocolMg3">Stage 3 amount (mg)</label><input id="vialProtocolMg3" type="number" min="0" step="any"></div><div><label for="vialProtocolWeeks3">Stage 3 duration (weeks)</label><input id="vialProtocolWeeks3" type="number" min="0" step="any"></div></div>
+<div class="grid"><div><label for="vialProtocolMg4">Stage 4 amount (mg)</label><input id="vialProtocolMg4" type="number" min="0" step="any"></div><div><label for="vialProtocolWeeks4">Stage 4 duration (weeks)</label><input id="vialProtocolWeeks4" type="number" min="0" step="any"></div></div>
+<p id="vialProtocolResult" role="status" style="white-space:pre-line"></p>
+<button id="vialProtocolLayer" type="button" class="secondary" disabled>Add protocol layer</button>
+</div>
 <div id="vialLinkedLayers"></div>
 <small>Linked layers update as you edit the numbers. Position and style them like other text layers. Use Export editable project to save the calculator and its layers together.</small>
 </details>
@@ -723,16 +733,20 @@ $('customFontUpload').onchange=async e=>{
  e.target.value='';
 };
 
-const vialInputIds=['vialMass','vialVolume','vialTarget'];
+const vialProtocolRows=[1,2,3,4].map(row=>['vialProtocolMg'+row,'vialProtocolWeeks'+row]);
+const vialInputIds=['vialMass','vialVolume','vialTarget',...vialProtocolRows.flat()];
+const vialControls=[...vialInputIds,'vialProtocolEnabled'];
+const vialLayerTypes=[['concentration','Concentration'],['sample','U-100 conversion'],['protocol','Protocol']];
 function isVialLayer(layer){
- return layer.type==='text'&&['concentration','sample'].includes(layer.vialField);
+ return layer.type==='text'&&vialLayerTypes.some(([field])=>field===layer.vialField);
 }
 function vialInputs(){
- return Object.fromEntries(vialInputIds.map(id=>[id,$(id).value]));
+ return {...Object.fromEntries(vialInputIds.map(id=>[id,$(id).value])),protocolEnabled:$('vialProtocolEnabled').checked};
 }
 let lastVialInputs=vialInputs();
 function restoreVialInputs(values){
  for(const id of vialInputIds)$(id).value=values?.[id]??'';
+ $('vialProtocolEnabled').checked=values?.protocolEnabled===true;
  lastVialInputs=vialInputs();
  refreshVialCalc();
 }
@@ -751,8 +765,27 @@ function calculateVial({vialMass,vialVolume,vialTarget}){
   capacityMessage:exceedsCapacity?format(units)+' units exceeds a 100-unit syringe’s capacity.':''
  };
 }
+function calculateVialProtocol(inputs){
+ if(!inputs.protocolEnabled)return {text:'',message:''};
+ const lines=[];
+ for(const [index,[mgId,weeksId]] of vialProtocolRows.entries()){
+  const amount=inputs[mgId],duration=inputs[weeksId];
+  if(!amount&&!duration)continue;
+  const mg=Number(amount),weeks=Number(duration);
+  if(!Number.isFinite(mg)||mg<=0||!Number.isFinite(weeks)||weeks<=0)
+   return {text:'',message:'Enter a positive amount and duration for stage '+(index+1)+'.'};
+  lines.push(mg+' mg for '+weeks+(weeks===1?' week':' weeks'));
+ }
+ return {text:lines.join('\n'),message:lines.length?'':'Enter at least one stage.'};
+}
+function vialLayerValues(inputs){
+ const protocol=calculateVialProtocol(inputs);
+ return {...calculateVial(inputs),protocol:protocol.text,protocolMessage:protocol.message};
+}
 function refreshVialCalc(){
- const inputs=vialInputs(),values=calculateVial(inputs);
+ const inputs=vialInputs(),values=vialLayerValues(inputs);
+ $('vialProtocolOptions').hidden=!inputs.protocolEnabled;
+ $('vialProtocolResult').textContent=values.protocol||values.protocolMessage;
  const message=!values.concentration?'Enter a positive vial amount and final volume.':
   values.capacityMessage||(inputs.vialTarget&&!values.sample?'Enter a positive target amount no greater than the vial amount.':'');
  $('vialResult').textContent=[values.concentration,values.sample&&values.sample+' (U-100)',message].filter(Boolean).join(' · ');
@@ -764,7 +797,7 @@ function refreshVialCalc(){
  }
  if(changed)selection();
 }
-for(const id of vialInputIds)$(id).addEventListener('input',()=>{
+for(const id of vialControls)$(id).addEventListener('input',()=>{
  if(batch.running)return;
  recordLayerEdit(id,lastVialInputs);
  lastVialInputs=vialInputs();
@@ -772,33 +805,38 @@ for(const id of vialInputIds)$(id).addEventListener('input',()=>{
 });
 function updateVialLayerLinks(){
  const links=$('vialLinkedLayers');links.replaceChildren();
- const values=calculateVial(vialInputs());
+ const values=vialLayerValues(vialInputs());
  const added=field=>studio.items.some(layer=>isVialLayer(layer)&&layer.vialField===field);
  $('vialConcentrationLayer').disabled=!values.concentration||added('concentration');
  $('vialSampleLayer').disabled=!values.sample||added('sample');
  $('vialBothLayers').disabled=!values.concentration||!values.sample||(added('concentration')&&added('sample'));
- for(const [field,label] of [['concentration','Concentration'],['sample','U-100 conversion']]){
+ $('vialProtocolLayer').disabled=!values.protocol||added('protocol');
+ for(const [field,label] of vialLayerTypes){
   const layer=studio.items.find(item=>isVialLayer(item)&&item.vialField===field);
   if(!layer)continue;
   const row=document.createElement('div'),button=document.createElement('button');
   button.type='button';button.className='secondary';button.textContent='Select layer';
   button.setAttribute('aria-label','Select '+label.toLowerCase()+' layer');
   button.onclick=()=>{studio.selected=layer.id;selection();$('layerEditorTitle').focus();};
-  row.append(label+' linked ',button);links.append(row);
+  row.append(label+(field==='protocol'&&!$('vialProtocolEnabled').checked?' linked (off) ':' linked '),button);links.append(row);
  }
 }
 function addVialLayers(fields){
  if(batch.running)return;
  if(batch.original)restoreBatch();
- const values=calculateVial(vialInputs());
+ const values=vialLayerValues(vialInputs());
  const additions=fields.filter(field=>values[field]&&!studio.items.some(layer=>isVialLayer(layer)&&layer.vialField===field));
  if(!additions.length)return;
  recordLayerEdit();
- for(const field of additions) add('text',{vialField:field,text:values[field],x:8,y:field==='concentration'?55:72,w:84,h:15,align:'center'},false);
+ for(const field of additions){
+  const bounds=field==='protocol'?{y:7,h:40}:{y:field==='concentration'?55:72,h:15};
+  add('text',{vialField:field,text:values[field],x:8,w:84,...bounds,align:'center'},false);
+ }
 }
 $('vialConcentrationLayer').onclick=()=>addVialLayers(['concentration']);
 $('vialSampleLayer').onclick=()=>addVialLayers(['sample']);
 $('vialBothLayers').onclick=()=>addVialLayers(['concentration','sample']);
+$('vialProtocolLayer').onclick=()=>addVialLayers(['protocol']);
 refreshVialCalc();
 
 $('saveproject').onclick=()=>{let data={version:1,labelPreset:$('labelSizePreset').value,width:$('width').value,height:$('height').value,customFonts:Object.fromEntries(customFonts),vialCalc:vialInputs(),items:studio.items.map(({img,qrimg,...rest})=>rest)};if(finished){const bg=document.createElement('canvas');bg.width=finished.width;bg.height=finished.height;bg.getContext('2d').drawImage(finished,0,0);data.backgroundImage=bg.toDataURL('image/png');}let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const name=askExportName('niimbot-editable-label','json');if(!name){URL.revokeObjectURL(a.href);return;}a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
@@ -841,7 +879,7 @@ $('projectfile').onchange=async e=>{
   undoLayers.length=0;redoLayers.length=0;historyField=null;syncHistoryButtons();
   studio.items=validItems;
   restoreVialInputs(data.vialCalc);
-  $('vialCalc').open=studio.items.some(isVialLayer);
+  $('vialCalc').open=$('vialProtocolEnabled').checked||studio.items.some(isVialLayer);
   if(typeof data.backgroundImage==='string'&&data.backgroundImage.startsWith('data:image/')){
    const background=new Image();background.src=data.backgroundImage;await background.decode();finished=background;
   }else finished=null;
@@ -926,7 +964,7 @@ $('batchprint').onclick=async()=>{
   });
   const totalCopies=rowCopies.reduce((a,b)=>a+b,0);
   if(!currentPrinterProfile()?.verified)throw Error('Batch printing is not available in experimental mode.');if(!confirm(`Print ${count} batch rows (${totalCopies} total labels)?`))return;
-  batch.running=true;batch.stop=false;for(const id of vialInputIds)$(id).disabled=true;$('batchprint').disabled=true;$('batchcancel').disabled=false;
+  batch.running=true;batch.stop=false;for(const id of vialControls)$(id).disabled=true;$('batchprint').disabled=true;$('batchcancel').disabled=false;
   Niimbot.WRITE_MODE=$('mode').value==='auto'?null:$('mode').value;
   let completed=0,printedCopies=0;
   for(let i=0;i<count;i++){
@@ -939,7 +977,7 @@ $('batchprint').onclick=async()=>{
   }
   $('batchprogress').textContent=`${batch.stop?'Stopped':'Completed'}: ${completed}/${count} rows sent (${printedCopies} labels requested).`;
  }catch(err){$('batchprogress').textContent='Batch interrupted: '+err.message+' Some labels may already have printed. Check the printer before retrying.';}
- finally{batch.running=false;for(const id of vialInputIds)$(id).disabled=false;$('batchprint').disabled=false;$('batchcancel').disabled=true;restoreBatch();}
+ finally{batch.running=false;for(const id of vialControls)$(id).disabled=false;$('batchprint').disabled=false;$('batchcancel').disabled=true;restoreBatch();}
 };
 </script><script>document.getElementById('downloadCsvTemplate').addEventListener('click',()=>{const csv='Product,Strength,LOT,Copies\r\nProduct A,10 mg,LOT-001,1\r\nProduct B,20 mg,LOT-002,2\r\n';const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='niimbot-batch-template.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);});</script><script>
 (function(){
