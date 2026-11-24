@@ -22,6 +22,8 @@ main.studio-active>#previewPanel{display:flex;flex-direction:column;height:100%;
 .import-ribbon-slot button{margin:2px 0;padding:5px 8px;font-size:12px}
 .import-ribbon-swatch{width:12px;height:12px;border:1px solid #aabbd3;border-radius:50%;flex:none}
 @media(max-width:470px){#importRibbonSlots{grid-template-columns:1fr}}
+
+#studioPrintStatus:not(:empty){margin:8px 0;padding:9px 11px;border:1px solid #526a8a;border-radius:7px;background:#102c40;color:#e9f0ff}
 </style></head><body><header><h1>NIIMBOT Custom Label Studio</h1><div style="color:#9cb0d0;margin-top:6px">Local label designer and direct Bluetooth printing</div>
 <a href="https://buymeacoffee.com/tmags" target="_blank" rel="noopener noreferrer"
 style="display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:10px 16px;background:#ffdd64;color:#242424;border-radius:9px;text-decoration:none;font-weight:750"
@@ -46,7 +48,7 @@ aria-label="Support development with a voluntary donation">☕ Support Developme
 <div id="monoPrintHelp"><small>Print all layers in one pass with a black ribbon on white labels. White objects knock out black backgrounds.</small></div>
 <div id="ribbonPrintOptions" hidden><small>Assign a ribbon color to each layer. Preview all colors together, then print one color at a time. Manually rewind and align the same labels before changing ribbons. Colors on screen are approximations; the printer still receives black artwork for the selected ribbon.</small><label for="ribbonPreview">Preview</label><select id="ribbonPreview"><option value="all">All colors (combined)</option><option value="black">Black only</option><option value="white">White only</option><option value="gold">Gold only</option><option value="red">Red only</option><option value="blue">Blue only</option><option value="green">Green only</option></select><label for="ribbonPrint">Ribbon installed / print color</label><select id="ribbonPrint"><option value="black">Black</option><option value="white">White</option><option value="gold">Gold</option><option value="red">Red</option><option value="blue">Blue</option><option value="green">Green</option></select><div id="color-workflow" style="margin:12px 0;padding:14px;border:1px solid #5b7595;border-radius:12px;background:#10243e"><strong>🌈 Colors & Print Passes</strong><p class="hint">Select a layer below to assign its ribbon color. Then use the guided printer steps here.</p><div id="wizardSteps" class="hint" role="status">Step 1 — Choose your ribbon color and preview its layers.</div><div class="tools"><button type="button" id="wizardStart">Start guided printing</button><button type="button" id="wizardNext" class="secondary" disabled>Next color / step</button><button type="button" id="wizardReset" class="secondary">Reset guide</button></div><div id="wizardHelp" class="hint">The same physical labels must be precisely realigned for each ribbon pass. Test on a spare label first.</div></div></div>
 <label id="customCopiesLabel" for="studioCopies">Number of identical copies (1–100)</label><input id="studioCopies" type="number" min="1" max="100" step="1" value="1">
-<button id="studioPrint" type="button">Print Label</button>
+<button id="studioPrint" type="button" aria-describedby="studioPrintStatus">Print Label</button>
 <div id="studioPrintStatus" role="status" class="hint"></div>
 <button id="downloadPrintRaster" type="button" class="secondary">Download exact print-ready PNG (diagnose edges)</button><small>Shows the same calibrated artwork sent to the printer, including position and rotation. If the PNG is black to the top but the physical label has a white strip, the printer/label edge is not being printed.</small>
 </div>
@@ -250,6 +252,7 @@ $('disconnect').onclick=async()=>{try{if(window.Niimbot)await Niimbot.disconnect
 function readCopies(value){const n=Number(value);if(!Number.isInteger(n)||n<1||n>100)throw Error('Copies must be a whole number between 1 and 100.');return n;}
 $('print').onclick=async()=>{try{if(studio.items.length&&new Set(studio.items.map(ribbonFor)).size>1)throw Error('This is a multi-ribbon design. Use Print selected ribbon color to avoid mixing passes.');engine();printerReady();let size=dims();render();Niimbot.WRITE_MODE=$('mode').value==='auto'?null:$('mode').value;status(`Preparing ${readCopies($('copies').value)} copies…`);await printWithSafety(c.toDataURL('image/png'),{model,size,copies:readCopies($('copies').value),density:Number($('density').value),onProgress:status});status('Print job confirmed by printer.');}catch(e){status('Print error: '+e.message+' Check the paper before retrying; a partial label may have printed.')}};
 function customPrintSource(mono,color){
+ if(!mono&&hasImportedRibbonComposition())return importedRibbonPrintSource(color);
  const previousMono=monoPrintMode,previousPass=ribbonRenderPass;
  try{
   monoPrintMode=mono;ribbonRenderPass=mono?null:color;
@@ -257,8 +260,14 @@ function customPrintSource(mono,color){
  }finally{monoPrintMode=previousMono;ribbonRenderPass=previousPass;render();}
 }
 function validateCustomPrint(mono,color){
+ if(hasImportedRibbonComposition()){
+  if(mono)throw Error('Choose Multi-Ribbon to print the imported artwork, then select the installed ribbon.');
+  if(importRibbonLoads.size)throw Error('Wait for the artwork to finish loading.');
+  if(!importedRibbonAvailable(color))throw Error('No artwork or custom layers are assigned to the '+color+' ribbon.');
+  return;
+ }
  if(!studio.items.length)throw Error('Add at least one custom layer first.');
- if(hasImportedRibbonComposition()||finished)throw Error('Open Import Label to print the imported artwork and your custom layers together.');
+ if(finished)throw Error('Open Import Label to print the imported artwork and your custom layers together.');
  if(!mono&&!studio.items.some(el=>ribbonFor(el)===color))throw Error('No layers assigned to '+color+'. Select a layer and choose its Ribbon / layer color.');
 }
 async function customLabelPrintRaster(){
@@ -278,7 +287,7 @@ $('downloadPrintRaster').onclick=async()=>{
   const a=document.createElement('a');
   a.download=name;a.href=prepared.data;document.body.appendChild(a);a.click();a.remove();
   status('Saved print-ready raster. Check whether its top row is black before adjusting printer feed calibration.');
- }catch(e){status('Print raster export failed: '+e.message);}
+ }catch(e){const info=$('studioPrintStatus');info.textContent='Print raster export failed: '+e.message;info.scrollIntoView({block:'nearest'});}
  finally{button.disabled=false;}
 };
 function syncCustomPrintMode(){
@@ -297,18 +306,19 @@ let studioPrinting=false;
 $('studioPrint').onclick=async()=>{
  if(studioPrinting)return;
  const button=$('studioPrint'),info=$('studioPrintStatus'),toggle=$('customPrintMode');
+ info.textContent='Checking print settings…';
  const mono=toggle.value==='mono',color=$('ribbonPrint').value;
  try{
   validateCustomPrint(mono,color);
   if(batch.running||finishedPrinting)throw Error('Wait for the current print job to finish.');
   if(batch.original)throw Error('Restore the original design from CSV preview first.');
   const copies=readCopies($('studioCopies').value);
-  engine();printerReady();
-  if(!mono&&!currentPrinterProfile()?.verified)throw Error('Multi-ribbon printing is not available in experimental mode.');
+  engine();const profile=printerReady();
+  if(!mono&&!profile.verified)throw Error('Multi-ribbon printing is not available in experimental mode.');
   const confirmation=mono
    ? 'Print '+copies+' identical copies of your Custom Label Studio design?'
    : 'Confirm '+color.toUpperCase()+' ribbon is installed. Print '+copies+' copies of the '+color+' pass? Rewind and realign the labels before the next color.';
-  if(!confirm(confirmation))return;
+  if(!confirm(confirmation)){info.textContent='Print canceled.';return;}
   const size=dims(),data=customPrintSource(mono,color);
   studioPrinting=true;button.disabled=true;toggle.disabled=true;
   Niimbot.WRITE_MODE=$('mode').value==='auto'?null:$('mode').value;
@@ -318,7 +328,10 @@ $('studioPrint').onclick=async()=>{
   info.textContent=mono
    ? 'Print command completed for '+copies+' copies. Check your printer output.'
    : color.toUpperCase()+' pass sent. Manually rewind and precisely realign labels, then change ribbon and select the next color. Do not advance labels between passes.';
- }catch(e){info.textContent='Print error: '+e.message+(studioPrinting?' Some copies may already have printed.':'');}
+ }catch(e){
+  info.textContent='Print error: '+e.message+(studioPrinting?' Some copies may already have printed.':'');
+  info.scrollIntoView({block:'nearest'});
+ }
  finally{studioPrinting=false;button.disabled=false;toggle.disabled=false;}
 };
 let finishedPrinting=false;
@@ -376,9 +389,7 @@ $('finishedPrint').onclick=async()=>{
   if(!confirm(confirmation))return;
   const size=dims();let data;
   if(ribbon){
-   try{
-    renderImportedComposition(color);data=c.toDataURL('image/png');
-   }finally{render();}
+   data=importedRibbonPrintSource(color);
   }else{render();data=c.toDataURL('image/png');}
   finishedPrinting=true;button.disabled=true;$('importPrintMode').disabled=true;
   Niimbot.WRITE_MODE=$('mode').value==='auto'?null:$('mode').value;
@@ -598,6 +609,12 @@ function drawStudioLayers(mono,pass,filter){
   if(el.type==='qr'&&el.qrimg)ctx.drawImage(ribbonImage(el.qrimg,w,h,mono?(displayInk==='#ffffff'?'white':'black'):(pass?'black':ribbon),!!el.invert),left,top,w,h);
   ctx.restore();
  }
+}
+function importedRibbonPrintSource(color){
+ try{
+  renderImportedComposition(color);
+  return c.toDataURL('image/png');
+ }finally{render();}
 }
 function renderImportedComposition(pass=null,filter='all'){
  preserveLayerDimensions();
