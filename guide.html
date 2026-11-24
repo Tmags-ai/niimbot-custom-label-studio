@@ -122,12 +122,17 @@ pre{overflow:auto;background:#142b47;color:#f4f8fd;padding:1rem;border-radius:.5
 <li>Edit the numbers in Vial Calc to update any linked layers. Their position and styling stay in place. An invalid input clears the affected layer text until the result is valid again.</li>
 <li>Use <strong>Export editable project</strong> to save the calculator inputs and linked layers together. Reopen the JSON with <strong>Import project</strong> to change the numbers later.</li>
 </ol>
-<h4>Print a protocol schedule</h4>
+<h4>Build and print a protocol schedule</h4>
+<p><strong>Protocol</strong> is an optional Vial Calc tool for composing a multi-stage, editable text schedule on a label. It formats amounts and durations you enter; it does not recommend or validate those values.</p>
 <ol>
-<li>In Vial Calc, check <strong>Enable Protocol</strong>. Enter an amount in mg and a duration in weeks for each stage you want to list, up to four. Leave unused rows blank.</li>
-<li>Enter the vial amount and final volume to include a U-100 unit conversion for each stage. The calculator flags stages that exceed the vial amount or the 100-unit syringe capacity and leaves their unit values off the label. Review the schedule and click <strong>Add protocol layer</strong>. Move and style it like other linked text layers. Editing a stage updates the layer. Unchecking <strong>Enable Protocol</strong> hides the schedule on the label and keeps the entered values.</li>
-<li>Use <strong>Export editable project</strong> to save both the schedule and the linked layer. Reopen the JSON with <strong>Import project</strong> to edit it later.</li>
+<li>Open <strong>Custom Label → Vial Calc</strong> and check <strong>Enable Protocol</strong>. The stage fields appear below the concentration and U-100 conversion tools.</li>
+<li>For each stage you want to show, enter <strong>Stage amount (mg)</strong> and <strong>Stage duration (weeks)</strong>. You can enter up to <strong>four stages</strong> in order; leave unused stage rows completely blank. A used stage needs a positive amount and duration.</li>
+<li>Read the live <strong>Protocol</strong> result. Without a valid vial amount and final volume it lists each stage's amount and weeks. When those vial fields are valid, the Studio can append a per-stage <strong>U-100</strong> conversion. A stage above the vial amount or exceeding 100 U-100 units produces a warning and shows its mg amount without an invalid units figure.</li>
+<li>Click <strong>Add protocol layer</strong> to place the multi-line schedule on your label. Adjust the layer's font, alignment, size, position, and rotation using the regular editor controls. Use <strong>Select layer</strong> in the linked-layer area to return to it.</li>
+<li>Edit any stage's amount or duration to update the linked text automatically. Unchecking <strong>Enable Protocol</strong> clears the schedule text from the linked layer but retains stage inputs; checking it again restores the valid schedule.</li>
+<li>Use <strong>Export editable project</strong> to save the protocol values and linked layer in a JSON file. Use <strong>Import project</strong> later to reopen and edit the design.</li>
 </ol>
+<p class="callout"><strong>Important:</strong> Protocol is a formatting aid only. It does not prescribe, validate, or recommend a dosing or treatment schedule. Verify the figures and intended use independently before printing or relying on a label.</p>
 <h3>Save and reopen an editable design</h3>
 <p>Use <strong>Export editable project</strong> to save the design as JSON, including editable layers and any imported background or custom fonts. Use <strong>Import project</strong> to reopen it. Export your current design before replacing it with another project. A PNG is useful for inspecting or sharing the finished artwork, while JSON lets you edit the individual layers again.</p>
 </article>
