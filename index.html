@@ -737,7 +737,7 @@ $('customFontUpload').onchange=async e=>{
 const vialProtocolRows=[1,2,3,4].map(row=>['vialProtocolMg'+row,'vialProtocolWeeks'+row]);
 const vialInputIds=['vialMass','vialVolume','vialTarget','vialTarget2',...vialProtocolRows.flat()];
 const vialControls=[...vialInputIds,'vialProtocolEnabled'];
-const vialLayerTypes=[['concentration','Concentration'],['sample','U-100 conversion'],['sample2','Second U-100 conversion'],['vialSummary','Vial amount and volume'],['protocol','Protocol']];
+const vialLayerTypes=[['concentration','Concentration'],['sample','U-100 conversion'],['sample2','Second U-100 conversion'],['vialSummary','Vial amount and volume'],['vialAmount','Vial amount'],['vialConversionWithVolume','Conversion and vial volume'],['protocol','Protocol']];
 function isVialLayer(layer){
  return layer.type==='text'&&vialLayerTypes.some(([field])=>field===layer.vialField);
 }
@@ -791,13 +791,17 @@ function vialLayerValues(inputs){
  const protocol=calculateVialProtocol(inputs,vial.concentration);
  const second=calculateVial({...inputs,vialTarget:inputs.vialTarget2});
  const vialSummary=vial.concentration?Number(inputs.vialMass)+'mg / '+Number(inputs.vialVolume)+'mL':'';
- return {...vial,sample2:second.sample,secondCapacityMessage:second.capacityMessage,vialSummary,protocol:protocol.text,protocolMessage:protocol.message};
+ const mass=Number(inputs.vialMass);
+ const vialAmount=Number.isFinite(mass)&&mass>0?mass+' MG':'';
+ const vialConversionWithVolume=vial.sample?vial.sample.replace(/^(.*) mg = (.*) units$/,'$2 Units = $1mg')+' - '+Number(inputs.vialVolume)+'ml bac':'';
+ return {...vial,vialAmount,vialConversionWithVolume,sample2:second.sample,secondCapacityMessage:second.capacityMessage,vialSummary,protocol:protocol.text,protocolMessage:protocol.message};
 }
 function formatVialLayer(layer,text){
  if(!text)return '';
  if(layer.vialStyle==='compact-dash')return text.replace(' mg = ','mg - ').replace(' units','u');
  if(layer.vialStyle==='compact-equals')return text.replace(' mg','mg').replace(' units','units');
  if(layer.vialStyle==='concentration-colon')return text.replace('Concentration ','Concentration:  ').replace(' mg/mL','mg/mL');
+ if(layer.vialStyle==='compact-amount')return text.replace(' MG','MG');
  if(layer.vialStyle==='pen-summary')return text.replace('mL','ml')+' Pen';
  return text;
 }
