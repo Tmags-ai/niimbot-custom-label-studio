@@ -34,6 +34,7 @@ aria-label="Support development with a voluntary donation">☕ Support Developme
 <div id="importRibbonSlots"></div>
 <label for="importRibbonPreview">Preview</label><select id="importRibbonPreview"><option value="all">All colors (combined)</option></select>
 <label for="importRibbonPass">Ribbon installed / print color</label><select id="importRibbonPass"></select>
+<small>To add text, shapes, or a QR code, open Custom Label and assign each new layer to a ribbon. Then return here to print the combined artwork.</small>
 <small>Use the same copies and the same physical labels for every pass. Rewind and realign the labels before changing ribbons.</small>
 </section>
 <label>Artwork fit</label><select id="fit"><option value="contain">Fit entire design (no cropping)</option><option value="cover">Fill label (crop edges if necessary)</option><option value="stretch">Stretch to label size</option></select>
@@ -257,7 +258,7 @@ function customPrintSource(mono,color){
 }
 function validateCustomPrint(mono,color){
  if(!studio.items.length)throw Error('Add at least one custom layer first.');
- if(finished)throw Error('Remove the imported finished label to print your custom layers.');
+ if(hasImportedRibbonComposition()||finished)throw Error('Open Import Label to print the imported artwork and your custom layers together.');
  if(!mono&&!studio.items.some(el=>ribbonFor(el)===color))throw Error('No layers assigned to '+color+'. Select a layer and choose its Ribbon / layer color.');
 }
 async function customLabelPrintRaster(){
@@ -323,8 +324,12 @@ $('studioPrint').onclick=async()=>{
 let finishedPrinting=false;
 const importRibbonLayers=new Map();
 const importRibbonLoads=new Set();
-let importTabActive=false;
+let importTabActive=false,customTabActive=false;
 function isRibbonImport(){return $('importPrintMode').value==='ribbon';}
+function hasImportedRibbonComposition(){return isRibbonImport()&&importRibbonLayers.size>0;}
+function importedRibbonAvailable(color){
+ return importRibbonLayers.has(color)||(importRibbonLayers.size>0&&studio.items.some(layer=>ribbonFor(layer)===color));
+}
 function syncImportMode(){
  const ribbon=isRibbonImport();
  $('importMonoOptions').hidden=ribbon;
@@ -341,7 +346,7 @@ function drawImportedRibbonArtwork(canvas,pass=null,previewFilter='all'){
  if(canvas.width!==size.w_px)canvas.width=size.w_px;
  if(canvas.height!==size.h_px)canvas.height=size.h_px;
  const g=canvas.getContext('2d'),fit=$('fit').value;
- g.fillStyle=!pass&&(previewFilter==='all'||previewFilter==='white')&&importRibbonLayers.has('white')?'#e5e5e5':'#fff';
+ g.fillStyle=!pass&&(previewFilter==='all'||previewFilter==='white')&&importedRibbonAvailable('white')?'#e5e5e5':'#fff';
  g.fillRect(0,0,canvas.width,canvas.height);
  for(const color of Object.keys(ribbonColors)){
   if(pass?pass!==color:previewFilter!=='all'&&previewFilter!==color)continue;
@@ -360,7 +365,7 @@ $('finishedPrint').onclick=async()=>{
  try{
   const copies=readCopies($('finishedCopies').value);
   if(ribbon&&importRibbonLoads.size)throw Error('Wait for the artwork to finish loading.');
-  if(ribbon&&!importRibbonLayers.has(color))throw Error('Upload artwork for the '+(color||'selected')+' ribbon first.');
+  if(ribbon&&!importedRibbonAvailable(color))throw Error('Add artwork for the '+(color||'selected')+' ribbon first.');
   if(!ribbon&&!finished)throw Error('Upload a preconfigured label first.');
   if(studioPrinting||batch.running)throw Error('Wait for the current print job to finish.');
   engine();const profile=printerReady();
@@ -371,8 +376,9 @@ $('finishedPrint').onclick=async()=>{
   if(!confirm(confirmation))return;
   const size=dims();let data;
   if(ribbon){
-   const raster=document.createElement('canvas');
-   drawImportedRibbonArtwork(raster,color);data=raster.toDataURL('image/png');
+   try{
+    renderImportedComposition(color);data=c.toDataURL('image/png');
+   }finally{render();}
   }else{render();data=c.toDataURL('image/png');}
   finishedPrinting=true;button.disabled=true;$('importPrintMode').disabled=true;
   Niimbot.WRITE_MODE=$('mode').value==='auto'?null:$('mode').value;
@@ -488,7 +494,7 @@ let ribbonRenderPass=null;
 let monoPrintMode=false;
 function syncImportRibbonChoices(){
  const pass=$('importRibbonPass'),preview=$('importRibbonPreview');
- const loaded=Object.keys(ribbonColors).filter(color=>importRibbonLayers.has(color));
+ const loaded=Object.keys(ribbonColors).filter(importedRibbonAvailable);
  for(const select of [pass,preview])for(const option of select.options)
   option.disabled=option.value!=='all'&&!loaded.includes(option.value);
  if(!loaded.includes(pass.value))pass.value=loaded[0]||'';
@@ -559,26 +565,16 @@ function finishLabelPreview(){
  c.style.borderRadius=circleLabel?'50%':'';
  requestAnimationFrame(updateResizeOverlay);
 }
-render=function(){
- if(importTabActive&&isRibbonImport()){
-  drawImportedRibbonArtwork(c,null,$('importRibbonPreview').value);
-  finishLabelPreview();return;
- }
- preserveLayerDimensions();
- syncQrDimensions();
- backgroundRender();
- if(!studio.items.length){finishLabelPreview();return;}
- // A custom project is an independent canvas: do not bake the quick template beneath it.
- if(!finished){ctx.fillStyle=monoPrintMode?'#fff':((!ribbonRenderPass&&studio.items.some(el=>ribbonFor(el)==='white')&&$('ribbonPreview').value!=='black')?'#e5e5e5':'#fff');ctx.fillRect(0,0,c.width,c.height);}
+function drawStudioLayers(mono,pass,filter){
  for(const el of studio.items){
   const ribbon=ribbonFor(el);
-  if(!monoPrintMode&&ribbonRenderPass&&ribbon!==ribbonRenderPass)continue;
-  if(!monoPrintMode&&!ribbonRenderPass&&$('ribbonPreview').value!=='all'&&ribbon!==$('ribbonPreview').value)continue;
-  const previewInk=!ribbonRenderPass?ribbonColors[ribbon]:'#000000';
+  if(!mono&&pass&&ribbon!==pass)continue;
+  if(!mono&&!pass&&filter!=='all'&&ribbon!==filter)continue;
+  const previewInk=!pass?ribbonColors[ribbon]:'#000000';
   const x=el.x*c.width/100,y=el.y*c.height/100,w=el.w*c.width/100,h=el.h*c.height/100;
   // The assigned ribbon determines the ink hue. Invert changes the source mask, never the ribbon hue.
   ctx.save();ctx.translate(x+w/2,y+h/2);ctx.rotate((Number(el.rotate)||0)*Math.PI/180);
-  const displayInk=monoPrintMode?((el.color==='white'||el.invert||ribbon==='white')?'#ffffff':'#000000'):(ribbonRenderPass?'#000000':previewInk);
+  const displayInk=mono?((el.color==='white'||el.invert||ribbon==='white')?'#ffffff':'#000000'):(pass?'#000000':previewInk);
   ctx.strokeStyle=displayInk;ctx.fillStyle=displayInk;const thickness=strokeWidthMm(el.strokeWidthMm);
   ctx.lineWidth=thickness===null?Math.max(1,c.width/400):thickness*labelDpi()/25.4;
   const unit=Math.max(2,ctx.lineWidth*2);const strokeStyle=el.strokeStyle||'solid';
@@ -598,9 +594,29 @@ render=function(){
     // Inversion must not turn the assigned ribbon into white/another color.
     if(fill!=='none'){ctx.fillStyle=displayInk;ctx.fill();}ctx.stroke();
   }
-  if(el.type==='image'&&el.img)ctx.drawImage(ribbonImage(el.img,w,h,monoPrintMode?(displayInk==='#ffffff'?'white':'black'):(ribbonRenderPass?'black':ribbon),!!el.lightInk!==!!el.invert),left,top,w,h);
-  if(el.type==='qr'&&el.qrimg)ctx.drawImage(ribbonImage(el.qrimg,w,h,monoPrintMode?(displayInk==='#ffffff'?'white':'black'):(ribbonRenderPass?'black':ribbon),!!el.invert),left,top,w,h);
+  if(el.type==='image'&&el.img)ctx.drawImage(ribbonImage(el.img,w,h,mono?(displayInk==='#ffffff'?'white':'black'):(pass?'black':ribbon),!!el.lightInk!==!!el.invert),left,top,w,h);
+  if(el.type==='qr'&&el.qrimg)ctx.drawImage(ribbonImage(el.qrimg,w,h,mono?(displayInk==='#ffffff'?'white':'black'):(pass?'black':ribbon),!!el.invert),left,top,w,h);
   ctx.restore();
+ }
+}
+function renderImportedComposition(pass=null,filter='all'){
+ preserveLayerDimensions();
+ syncQrDimensions();
+ drawImportedRibbonArtwork(c,pass,filter);
+ if(importRibbonLayers.size)drawStudioLayers(false,pass,filter);
+}
+render=function(){
+ if(isRibbonImport()&&(importTabActive||(customTabActive&&importRibbonLayers.size))){
+  renderImportedComposition(null,importTabActive?$('importRibbonPreview').value:$('ribbonPreview').value);
+  finishLabelPreview();return;
+ }
+ preserveLayerDimensions();
+ syncQrDimensions();
+ backgroundRender();
+ if(studio.items.length){
+  // A custom project is an independent canvas: do not bake the quick template beneath it.
+  if(!finished){ctx.fillStyle=monoPrintMode?'#fff':((!ribbonRenderPass&&studio.items.some(el=>ribbonFor(el)==='white')&&$('ribbonPreview').value!=='black')?'#e5e5e5':'#fff');ctx.fillRect(0,0,c.width,c.height);}
+  drawStudioLayers(monoPrintMode,ribbonRenderPass,$('ribbonPreview').value);
  }
  finishLabelPreview();
 };
@@ -804,7 +820,7 @@ c.addEventListener('pointerdown',e=>{
  }
  const hit=studio.items.slice().reverse().find(el=>p.x>=el.x-2&&p.x<=el.x+el.w+2&&p.y>=el.y-2&&p.y<=el.y+Math.max(el.h,5)+2);
  if(hit){backgroundSelected=false;studio.selected=hit.id;studio.drag={mode:'move',x:p.x-hit.x,y:p.y-hit.y};c.setPointerCapture(e.pointerId);selection();}
- else if(finished){backgroundSelected=true;studio.selected=null;backgroundBounds=backgroundBounds||{x:0,y:0,w:100,h:100};studio.drag={mode:'move',x:p.x-backgroundBounds.x,y:p.y-backgroundBounds.y,background:true};c.setPointerCapture(e.pointerId);selection();}
+ else if(finished&&!hasImportedRibbonComposition()){backgroundSelected=true;studio.selected=null;backgroundBounds=backgroundBounds||{x:0,y:0,w:100,h:100};studio.drag={mode:'move',x:p.x-backgroundBounds.x,y:p.y-backgroundBounds.y,background:true};c.setPointerCapture(e.pointerId);selection();}
  else{backgroundSelected=false;studio.selected=null;selection();}
 });
 window.addEventListener('pointermove',e=>{
@@ -1212,8 +1228,9 @@ $('batchprint').onclick=async()=>{
  syncShared();
  const buttons=[...document.querySelectorAll('[data-open-tab]')],panels=[...document.querySelectorAll('.studio-tab-content')];
  function openTab(id){
-  const previewModeChanged=importTabActive!==(id==='import');
-  importTabActive=id==='import';
+  const previewModeChanged=importTabActive!==(id==='import')||customTabActive!==(id==='studio');
+  importTabActive=id==='import';customTabActive=id==='studio';
+  if(isRibbonImport()&&importTabActive)syncImportRibbonChoices();
   if(previewModeChanged&&isRibbonImport())render();
   shared.hidden=id==='setup';syncShared();
   $('layerEditor').hidden=id!=='studio';
