@@ -24,6 +24,21 @@ Use the layer controls to add and customize:
 
 Select a layer to adjust its position, size, rotation, color, font, and other available properties. Drag elements in the preview to arrange the design. Enable **Snap to another layer** to assist alignment.
 
+## Vial Calc: concentration, conversion and optional Protocol
+
+In **Custom Label**, expand **Vial Calc** below the add-layer controls. Enter a positive **Vial amount (mg)** and **Final vial volume (mL)** to see the concentration in mg/mL. The optional **Target amount (mg)** field shows the corresponding U-100 units when the calculation is valid. You can add a linked concentration or conversion text layer, then move and format it.
+
+### Build a protocol label
+
+1. Check **Enable Protocol** inside Vial Calc.
+2. Enter the **amount (mg)** and **duration (weeks)** for each stage, up to four. Each used stage needs both positive values; leave unused stages blank.
+3. Review the live schedule. When valid vial amount and volume are entered, the preview can include a U-100 conversion alongside each stage. A stage above the vial's total amount or above 100 units gets a warning and omits the unit conversion, rather than presenting an invalid unit value.
+4. Click **Add protocol layer** to place the multi-line schedule in your design. Select, resize, rotate, align, and style it like another text layer.
+5. Changing stage amounts or durations automatically updates the linked protocol text. Turning **Enable Protocol** off clears the schedule from that linked layer while retaining your entered stage values; turning it back on restores valid schedule text.
+6. Choose **Export editable project** to save calculator values and the linked layer as JSON. Reopen with **Import project** to make future edits.
+
+**Important:** Protocol is a customizable label-formatting tool, not a medically validated protocol generator. The calculator does not determine appropriate amounts, timing, or treatment suitability. Review all data independently.
+
 ## 3. Import a Canva design
 
 1. In Canva, choose **Share → Download**.
