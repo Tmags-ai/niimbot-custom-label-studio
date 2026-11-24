@@ -37,6 +37,7 @@ aria-label="Support development with a voluntary donation">☕ Support Developme
 <div><label for="vialVolume">Final vial volume (mL)</label><input id="vialVolume" type="number" min="0" step="any"></div>
 <div><label for="vialTarget">Target amount (mg, optional)</label><input id="vialTarget" type="number" min="0" step="any"></div>
 </div>
+<div id="vialTarget2Control" hidden><label for="vialTarget2">Second target amount (mg)</label><input id="vialTarget2" type="number" min="0" step="any"></div>
 <p id="vialResult" role="status" class="hint"></p>
 <button id="vialConcentrationLayer" type="button" class="secondary" disabled>Add concentration layer</button>
 <button id="vialSampleLayer" type="button" class="secondary" disabled>Add U-100 conversion layer</button>
@@ -734,9 +735,9 @@ $('customFontUpload').onchange=async e=>{
 };
 
 const vialProtocolRows=[1,2,3,4].map(row=>['vialProtocolMg'+row,'vialProtocolWeeks'+row]);
-const vialInputIds=['vialMass','vialVolume','vialTarget',...vialProtocolRows.flat()];
+const vialInputIds=['vialMass','vialVolume','vialTarget','vialTarget2',...vialProtocolRows.flat()];
 const vialControls=[...vialInputIds,'vialProtocolEnabled'];
-const vialLayerTypes=[['concentration','Concentration'],['sample','U-100 conversion'],['protocol','Protocol']];
+const vialLayerTypes=[['concentration','Concentration'],['sample','U-100 conversion'],['sample2','Second U-100 conversion'],['vialSummary','Vial amount and volume'],['protocol','Protocol']];
 function isVialLayer(layer){
  return layer.type==='text'&&vialLayerTypes.some(([field])=>field===layer.vialField);
 }
@@ -788,7 +789,17 @@ function calculateVialProtocol(inputs,concentration){
 function vialLayerValues(inputs){
  const vial=calculateVial(inputs);
  const protocol=calculateVialProtocol(inputs,vial.concentration);
- return {...vial,protocol:protocol.text,protocolMessage:protocol.message};
+ const second=calculateVial({...inputs,vialTarget:inputs.vialTarget2});
+ const vialSummary=vial.concentration?Number(inputs.vialMass)+'mg / '+Number(inputs.vialVolume)+'mL':'';
+ return {...vial,sample2:second.sample,secondCapacityMessage:second.capacityMessage,vialSummary,protocol:protocol.text,protocolMessage:protocol.message};
+}
+function formatVialLayer(layer,text){
+ if(!text)return '';
+ if(layer.vialStyle==='compact-dash')return text.replace(' mg = ','mg - ').replace(' units','u');
+ if(layer.vialStyle==='compact-equals')return text.replace(' mg','mg').replace(' units','units');
+ if(layer.vialStyle==='concentration-colon')return text.replace('Concentration ','Concentration:  ').replace(' mg/mL','mg/mL');
+ if(layer.vialStyle==='pen-summary')return text.replace('mL','ml')+' Pen';
+ return text;
 }
 function refreshVialCalc(){
  const inputs=vialInputs(),values=vialLayerValues(inputs);
@@ -796,11 +807,13 @@ function refreshVialCalc(){
  $('vialProtocolResult').textContent=[values.protocol,values.protocolMessage].filter(Boolean).join('\n');
  const message=!values.concentration?'Enter a positive vial amount and final volume.':
   values.capacityMessage||(inputs.vialTarget&&!values.sample?'Enter a positive target amount no greater than the vial amount.':'');
- $('vialResult').textContent=[values.concentration,values.sample&&values.sample+' (U-100)',message].filter(Boolean).join(' · ');
+ const secondMessage=inputs.vialTarget2&&values.concentration&&!values.sample2
+  ? 'Second target: '+(values.secondCapacityMessage||'Enter a positive amount no greater than the vial amount.'):'';
+ $('vialResult').textContent=[values.concentration,values.sample&&values.sample+' (U-100)',values.sample2&&values.sample2+' (U-100)',message,secondMessage].filter(Boolean).join(' · ');
  updateVialLayerLinks();
  let changed=false;
  for(const layer of studio.items.filter(isVialLayer)){
-  const text=values[layer.vialField]||'';
+  const text=formatVialLayer(layer,values[layer.vialField]||'');
   if(layer.text!==text){layer.text=text;changed=true;}
  }
  if(changed)selection();
@@ -817,6 +830,7 @@ function updateVialLayerLinks(){
  const added=field=>studio.items.some(layer=>isVialLayer(layer)&&layer.vialField===field);
  $('vialConcentrationLayer').disabled=!values.concentration||added('concentration');
  $('vialSampleLayer').disabled=!values.sample||added('sample');
+ $('vialTarget2Control').hidden=!added('sample2');
  $('vialBothLayers').disabled=!values.concentration||!values.sample||(added('concentration')&&added('sample'));
  $('vialProtocolLayer').disabled=!values.protocol||added('protocol');
  for(const [field,label] of vialLayerTypes){
