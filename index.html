@@ -765,27 +765,35 @@ function calculateVial({vialMass,vialVolume,vialTarget}){
   capacityMessage:exceedsCapacity?format(units)+' units exceeds a 100-unit syringe’s capacity.':''
  };
 }
-function calculateVialProtocol(inputs){
+function calculateVialProtocol(inputs,concentration){
  if(!inputs.protocolEnabled)return {text:'',message:''};
- const lines=[];
+ const lines=[],warnings=[];
  for(const [index,[mgId,weeksId]] of vialProtocolRows.entries()){
   const amount=inputs[mgId],duration=inputs[weeksId];
   if(!amount&&!duration)continue;
-  const mg=Number(amount),weeks=Number(duration);
+  const mg=Number(amount),weeks=Number(duration),stage=index+1;
   if(!Number.isFinite(mg)||mg<=0||!Number.isFinite(weeks)||weeks<=0)
-   return {text:'',message:'Enter a positive amount and duration for stage '+(index+1)+'.'};
-  lines.push(mg+' mg for '+weeks+(weeks===1?' week':' weeks'));
+   return {text:'',message:'Enter a positive amount and duration for stage '+stage+'.'};
+  const conversion=concentration?calculateVial({...inputs,vialTarget:mg}):null;
+  if(conversion&&!conversion.sample){
+   warnings.push('Stage '+stage+': '+(conversion.capacityMessage||
+    (mg>Number(inputs.vialMass)?'Amount exceeds the vial amount.':'Conversion is unavailable.')));
+  }
+  lines.push((conversion?.sample||mg+' mg')+' for '+weeks+(weeks===1?' week':' weeks'));
  }
- return {text:lines.join('\n'),message:lines.length?'':'Enter at least one stage.'};
+ if(!lines.length)return {text:'',message:'Enter at least one stage.'};
+ if(!concentration)warnings.push('Enter the vial amount and final volume to show U-100 units.');
+ return {text:lines.join('\n'),message:warnings.join('\n')};
 }
 function vialLayerValues(inputs){
- const protocol=calculateVialProtocol(inputs);
- return {...calculateVial(inputs),protocol:protocol.text,protocolMessage:protocol.message};
+ const vial=calculateVial(inputs);
+ const protocol=calculateVialProtocol(inputs,vial.concentration);
+ return {...vial,protocol:protocol.text,protocolMessage:protocol.message};
 }
 function refreshVialCalc(){
  const inputs=vialInputs(),values=vialLayerValues(inputs);
  $('vialProtocolOptions').hidden=!inputs.protocolEnabled;
- $('vialProtocolResult').textContent=values.protocol||values.protocolMessage;
+ $('vialProtocolResult').textContent=[values.protocol,values.protocolMessage].filter(Boolean).join('\n');
  const message=!values.concentration?'Enter a positive vial amount and final volume.':
   values.capacityMessage||(inputs.vialTarget&&!values.sample?'Enter a positive target amount no greater than the vial amount.':'');
  $('vialResult').textContent=[values.concentration,values.sample&&values.sample+' (U-100)',message].filter(Boolean).join(' · ');
