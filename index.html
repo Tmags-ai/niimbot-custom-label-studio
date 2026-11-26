@@ -66,6 +66,12 @@ aria-label="Support development with a voluntary donation">☕ Support Developme
 <div id="vialTarget3Control" hidden><label for="vialTarget3">Third target amount (mg)</label><input id="vialTarget3" type="number" min="0" step="any"></div>
 <div id="vialTarget4Control" hidden><label for="vialTarget4">Fourth target amount (mg)</label><input id="vialTarget4" type="number" min="0" step="any"></div>
 <p id="vialResult" role="status" class="hint"></p>
+<fieldset style="margin:10px 0;border:1px solid #41516c;border-radius:8px">
+<legend>Show on label</legend>
+<label><input id="vialShowConcentration" type="checkbox" checked style="width:auto"> Concentration</label>
+<label><input id="vialShowConversion" type="checkbox" checked style="width:auto"> U-100 conversion</label>
+<label><input id="vialShowProtocol" type="checkbox" checked style="width:auto"> Protocol</label>
+</fieldset>
 <button id="vialConcentrationLayer" type="button" class="secondary" disabled>Add concentration layer</button>
 <button id="vialSampleLayer" type="button" class="secondary" disabled>Add U-100 conversion layer</button>
 <button id="vialBothLayers" type="button" disabled>Add both to label</button>
@@ -268,7 +274,7 @@ function validateCustomPrint(mono,color){
  }
  if(!studio.items.length)throw Error('Add at least one custom layer first.');
  if(finished)throw Error('Open Import Label to print the imported artwork and your custom layers together.');
- if(!mono&&!studio.items.some(el=>ribbonFor(el)===color))throw Error('No layers assigned to '+color+'. Select a layer and choose its Ribbon / layer color.');
+ if(!mono&&!studio.items.some(el=>layerVisible(el)&&ribbonFor(el)===color))throw Error('No layers assigned to '+color+'. Select a layer and choose its Ribbon / layer color.');
 }
 async function customLabelPrintRaster(){
  const mono=$('customPrintMode').value==='mono',color=$('ribbonPrint').value;
@@ -341,7 +347,7 @@ let importTabActive=false,customTabActive=false;
 function isRibbonImport(){return $('importPrintMode').value==='ribbon';}
 function hasImportedRibbonComposition(){return isRibbonImport()&&importRibbonLayers.size>0;}
 function importedRibbonAvailable(color){
- return importRibbonLayers.has(color)||(importRibbonLayers.size>0&&studio.items.some(layer=>ribbonFor(layer)===color));
+ return importRibbonLayers.has(color)||(importRibbonLayers.size>0&&studio.items.some(layer=>layerVisible(layer)&&ribbonFor(layer)===color));
 }
 function syncImportMode(){
  const ribbon=isRibbonImport();
@@ -595,6 +601,7 @@ function finishLabelPreview(){
 }
 function drawStudioLayers(mono,pass,filter){
  for(const el of studio.items){
+  if(!layerVisible(el))continue;
   const ribbon=ribbonFor(el);
   if(!mono&&pass&&ribbon!==pass)continue;
   if(!mono&&!pass&&filter!=='all'&&ribbon!==filter)continue;
@@ -823,7 +830,7 @@ rotateHandle.style.cssText='position:absolute;right:-27px;top:-27px;width:16px;h
 rotateHandle.innerHTML='<span style="position:absolute;left:3px;top:-1px;color:#1685f5;font-size:12px">↻</span>';
 resizeOverlay.appendChild(rotateHandle);
 let backgroundBounds=null,backgroundSelected=false;
-function activeBounds(){if(importTabActive&&isRibbonImport())return null;return backgroundSelected&&finished?(backgroundBounds||{x:0,y:0,w:100,h:100}):studio.items.find(el=>el.id===studio.selected);}
+function activeBounds(){if(importTabActive&&isRibbonImport())return null;return backgroundSelected&&finished?(backgroundBounds||{x:0,y:0,w:100,h:100}):studio.items.find(el=>el.id===studio.selected&&layerVisible(el));}
 function updateResizeOverlay(){
  previewParent.style.setProperty('--preview-aspect',c.width/Math.max(1,c.height));
  const b=activeBounds();if(!b){resizeOverlay.style.display='none';return;}
@@ -852,7 +859,7 @@ c.addEventListener('pointerdown',e=>{
   const corner=Object.keys(corners).find(k=>Math.abs(p.x-corners[k][0])<threshold&&Math.abs(p.y-corners[k][1])<threshold);
   if(corner){studio.drag={mode:'resize',corner,start:p,bounds:{...current},background:backgroundSelected,locked:backgroundSelected?$('backgroundAspectLock').checked:($('aspectlock').checked||['qr','square','circle'].includes(current.type))};c.setPointerCapture(e.pointerId);return;}
  }
- const hit=studio.items.slice().reverse().find(el=>p.x>=el.x-2&&p.x<=el.x+el.w+2&&p.y>=el.y-2&&p.y<=el.y+Math.max(el.h,5)+2);
+ const hit=studio.items.slice().reverse().find(el=>layerVisible(el)&&p.x>=el.x-2&&p.x<=el.x+el.w+2&&p.y>=el.y-2&&p.y<=el.y+Math.max(el.h,5)+2);
  if(hit){backgroundSelected=false;studio.selected=hit.id;studio.drag={mode:'move',x:p.x-hit.x,y:p.y-hit.y};c.setPointerCapture(e.pointerId);selection();}
  else if(finished&&!hasImportedRibbonComposition()){backgroundSelected=true;studio.selected=null;backgroundBounds=backgroundBounds||{x:0,y:0,w:100,h:100};studio.drag={mode:'move',x:p.x-backgroundBounds.x,y:p.y-backgroundBounds.y,background:true};c.setPointerCapture(e.pointerId);selection();}
  else{backgroundSelected=false;studio.selected=null;selection();}
@@ -929,18 +936,32 @@ $('customFontUpload').onchange=async e=>{
 const vialProtocolRows=[1,2,3,4].map(row=>['vialProtocolMg'+row,'vialProtocolWeeks'+row]);
 const vialExtraTargets=[[2,'Second'],[3,'Third'],[4,'Fourth']];
 const vialInputIds=['vialMass','vialVolume','vialTarget',...vialExtraTargets.map(([i])=>'vialTarget'+i),...vialProtocolRows.flat()];
-const vialControls=[...vialInputIds,'vialProtocolEnabled'];
+const vialVisibilityIds=['vialShowConcentration','vialShowConversion','vialShowProtocol'];
+const vialControls=[...vialInputIds,...vialVisibilityIds,'vialProtocolEnabled'];
 const vialLayerTypes=[['concentration','Concentration'],['sample','U-100 conversion'],...vialExtraTargets.map(([i,name])=>['sample'+i,name+' U-100 conversion']),['vialVolumeText','Vial volume'],['vialSummary','Vial amount and volume'],['vialAmount','Vial amount'],['vialConversionWithVolume','Conversion and vial volume'],['protocol','Protocol']];
 function isVialLayer(layer){
  return layer.type==='text'&&vialLayerTypes.some(([field])=>field===layer.vialField);
 }
+function layerVisible(layer){
+ if(!isVialLayer(layer))return true;
+ const field=layer.vialField;
+ if(field==='concentration')return $('vialShowConcentration').checked;
+ if(field==='protocol')return $('vialProtocolEnabled').checked&&$('vialShowProtocol').checked;
+ if(/^sample[2-4]?$/.test(field)||field==='vialConversionWithVolume')return $('vialShowConversion').checked;
+ return true;
+}
 function vialInputs(){
- return {...Object.fromEntries(vialInputIds.map(id=>[id,$(id).value])),protocolEnabled:$('vialProtocolEnabled').checked};
+ return {
+  ...Object.fromEntries(vialInputIds.map(id=>[id,$(id).value])),
+  ...Object.fromEntries(vialVisibilityIds.map(id=>[id,$(id).checked])),
+  protocolEnabled:$('vialProtocolEnabled').checked
+ };
 }
 let lastVialInputs=vialInputs();
 function restoreVialInputs(values){
  for(const id of vialInputIds)$(id).value=values?.[id]??'';
  $('vialProtocolEnabled').checked=values?.protocolEnabled===true;
+ for(const id of vialVisibilityIds)$(id).checked=values?.[id]!==false;
  lastVialInputs=vialInputs();
  refreshVialCalc();
 }
@@ -1036,6 +1057,7 @@ for(const id of vialControls)$(id).addEventListener('input',()=>{
  recordLayerEdit(id,lastVialInputs);
  lastVialInputs=vialInputs();
  refreshVialCalc();
+ if(vialVisibilityIds.includes(id))selection();
 });
 function updateVialLayerLinks(){
  const links=$('vialLinkedLayers');links.replaceChildren();
@@ -1053,7 +1075,7 @@ function updateVialLayerLinks(){
   button.type='button';button.className='secondary';button.textContent='Select layer';
   button.setAttribute('aria-label','Select '+label.toLowerCase()+' layer');
   button.onclick=()=>{studio.selected=layer.id;selection();$('layerEditorTitle').focus();};
-  row.append(label+(field==='protocol'&&!$('vialProtocolEnabled').checked?' linked (off) ':' linked '),button);links.append(row);
+  row.append(label+(layerVisible(layer)?' linked ':' linked (hidden) '),button);links.append(row);
  }
 }
 function addVialLayers(fields){
