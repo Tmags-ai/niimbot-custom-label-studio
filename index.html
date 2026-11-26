@@ -419,7 +419,21 @@ $('finished').addEventListener('change',async e=>{
   $('finishedPrintStatus').textContent='Imported '+file.name+'.';
  }catch(err){$('finishedPrintStatus').textContent='Import failed: '+err.message;}
 });
-$('clearfinished').onclick=()=>{finished=null;$('finished').value='';render();status('Imported artwork removed. Designer is active.');};$('fit').addEventListener('change',()=>render());['width','height','headline','details','quicktemplate','separator'].forEach(id=>$(id).addEventListener('input',render));$('labelOrientation').addEventListener('change',()=>{try{localStorage.setItem('niimbot-label-orientation',$('labelOrientation').value)}catch(e){}render();});try{$('labelOrientation').value=localStorage.getItem('niimbot-label-orientation')||'landscape'}catch(e){}render();
+$('clearfinished').onclick=()=>{finished=null;$('finished').value='';render();status('Imported artwork removed. Designer is active.');};$('fit').addEventListener('change',()=>render());['width','height','headline','details','quicktemplate','separator'].forEach(id=>$(id).addEventListener('input',render));$('labelOrientation').addEventListener('change',()=>{
+ const orientation=$('labelOrientation').value;
+ try{localStorage.setItem('niimbot-label-orientation',orientation)}catch(e){}
+ // Older projects have normalized layer coordinates but no orientation field.
+ // The first explicit orientation change resolves that ambiguity before any edits.
+ if(legacyImportBounds&&legacyImportBounds.orientation!==orientation){
+  for(const layer of studio.items){
+   const bounds=legacyImportBounds.layers.get(layer.id);
+   if(bounds)Object.assign(layer,bounds);
+  }
+  legacyImportBounds=null;
+  studioLastCanvasSize=dims();
+  selection();
+ }else render();
+});try{$('labelOrientation').value=localStorage.getItem('niimbot-label-orientation')||'landscape'}catch(e){}render();
 
 function askExportName(defaultBase,ext){
  const raw=prompt('Save as — enter a file name:',defaultBase);
@@ -429,6 +443,7 @@ function askExportName(defaultBase,ext){
  return cleaned.replace(new RegExp('\\\\.'+ext+'$','i'),'')+'.'+ext;
 }
 const studio={items:[],selected:null,drag:null};
+let legacyImportBounds=null;
 const undoLayers=[],redoLayers=[];
 let historyField=null;
 function layerLabel(layer){
@@ -443,6 +458,7 @@ function syncHistoryButtons(){
 }
 function recordLayerEdit(field=null,vial){
  if(batch.running)return;
+ legacyImportBounds=null;
  if(batch.original)restoreBatch();
  if(field&&historyField===field)return;
  undoLayers.push(layerSnapshot(vial));
@@ -482,6 +498,7 @@ let studioLastCanvasSize=dims();
 function preserveLayerDimensions(){
  const next=dims(),prev=studioLastCanvasSize;
  if(prev.w_px!==next.w_px||prev.h_px!==next.h_px){
+  legacyImportBounds=null;
   for(const el of studio.items){
    // Keep every layer's physical width and height instead of stretching it with the canvas.
    // Retain its relative center on the label; objects may extend beyond a narrower label.
@@ -1057,7 +1074,7 @@ $('vialBothLayers').onclick=()=>addVialLayers(['concentration','sample']);
 $('vialProtocolLayer').onclick=()=>addVialLayers(['protocol']);
 refreshVialCalc();
 
-$('saveproject').onclick=()=>{let data={version:1,labelPreset:$('labelSizePreset').value,width:$('width').value,height:$('height').value,customFonts:Object.fromEntries(customFonts),vialCalc:vialInputs(),items:studio.items.map(({img,qrimg,...rest})=>rest)};if(finished){const bg=document.createElement('canvas');bg.width=finished.width;bg.height=finished.height;bg.getContext('2d').drawImage(finished,0,0);data.backgroundImage=bg.toDataURL('image/png');}let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const name=askExportName('niimbot-editable-label','json');if(!name){URL.revokeObjectURL(a.href);return;}a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
+$('saveproject').onclick=()=>{let data={version:1,orientation:$('labelOrientation').value,labelPreset:$('labelSizePreset').value,width:$('width').value,height:$('height').value,customFonts:Object.fromEntries(customFonts),vialCalc:vialInputs(),items:studio.items.map(({img,qrimg,...rest})=>rest)};if(finished){const bg=document.createElement('canvas');bg.width=finished.width;bg.height=finished.height;bg.getContext('2d').drawImage(finished,0,0);data.backgroundImage=bg.toDataURL('image/png');}let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const name=askExportName('niimbot-editable-label','json');if(!name){URL.revokeObjectURL(a.href);return;}a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
 $('loadproject').onclick=()=>{const input=$('projectfile');input.value='';input.click();};
 $('projectfile').onchange=async e=>{
  const file=e.target.files?.[0];
@@ -1072,6 +1089,8 @@ $('projectfile').onchange=async e=>{
   if(!data||typeof data!=='object'||!Array.isArray(data.items))
    throw Error('No editable "items" array found. Choose a Studio editable-project JSON, not a printer-settings JSON.');
   if(data.items.length>200)throw Error('Project has more than 200 layers.');
+  const savedOrientation=['portrait','landscape'].includes(data.orientation)?data.orientation:
+   file.name.match(/(?:^|[^a-z])(portrait|landscape)(?=[^a-z]|$)/i)?.[1].toLowerCase();
   const validItems=data.items.map((el,i)=>{
    if(!el||typeof el!=='object'||Array.isArray(el))throw Error('Invalid layer at position '+(i+1));
    const layer={...el,id:Date.now()+i+Math.random()};
@@ -1085,6 +1104,7 @@ $('projectfile').onchange=async e=>{
     try{await installCustomFont(name,source);}catch(err){fontWarnings++;console.warn('Custom font skipped:',name,err);}
    }
   }
+  legacyImportBounds=null;
   if(data.width!==undefined&&Number(data.width)>0)$('width').value=data.width;
   if(data.height!==undefined&&Number(data.height)>0)$('height').value=data.height;
   const preset=$('labelSizePreset');
@@ -1094,8 +1114,19 @@ $('projectfile').onchange=async e=>{
   }else if(data.width!==undefined||data.height!==undefined){
    $('width').dispatchEvent(new Event('input',{bubbles:true}));
   }
+  const orientation=$('labelOrientation');
+  if(savedOrientation&&orientation.value!==savedOrientation){
+   orientation.value=savedOrientation;
+   orientation.dispatchEvent(new Event('change',{bubbles:true}));
+  }
   undoLayers.length=0;redoLayers.length=0;historyField=null;syncHistoryButtons();
+  studio.selected=null;
+  studioLastCanvasSize=dims();
   studio.items=validItems;
+  backgroundSelected=false;backgroundBounds=null;
+  if(!savedOrientation){
+   legacyImportBounds={orientation:orientation.value,layers:new Map(validItems.map(({id,x,y,w,h})=>[id,{x,y,w,h}]))};
+  }
   restoreVialInputs(data.vialCalc);
   $('vialCalc').open=$('vialProtocolEnabled').checked||studio.items.some(isVialLayer);
   if(typeof data.backgroundImage==='string'&&data.backgroundImage.startsWith('data:image/')){
